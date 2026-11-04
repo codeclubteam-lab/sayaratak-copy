@@ -1,0 +1,67 @@
+{
+ "desktop-open": {
+  "dialog": true,
+  "slot": "dialog-content",
+  "side": null,
+  "title": "Sign in or create an account",
+  "runs": "Gated action ran 0 times",
+  "me": "Signed in as: nobody",
+  "focus": "Sign in as demo user",
+  "overflow": false
+ },
+ "desktop-escape": {
+  "dialog": false,
+  "runs": "Gated action ran 0 times",
+  "me": "Signed in as: nobody",
+  "focus": "Run gated action",
+  "overflow": false
+ },
+ "desktop-after-signin": {
+  "dialog": false,
+  "runs": "Gated action ran 1 times",
+  "me": "Signed in as: Omar Hassan",
+  "focus": "Run gated action",
+  "overflow": false
+ },
+ "desktop-signed-in-direct": {
+  "dialog": false,
+  "runs": "Gated action ran 2 times",
+  "me": "Signed in as: Omar Hassan",
+  "focus": "Run gated action",
+  "overflow": false
+ },
+ "mobile-open": {
+  "dialog": true,
+  "slot": "sheet-content",
+  "side": "bottom",
+  "title": "Sign in or create an account",
+  "runs": "Gated action ran 0 times",
+  "me": "Signed in as: nobody",
+  "focus": "Sign in as demo user",
+  "overflow": false
+ },
+ "mobile-escape": {
+  "dialog": false,
+  "runs": "Gated action ran 0 times",
+  "me": "Signed in as: nobody",
+  "focus": "Run gated action",
+  "overflow": false
+ },
+ "mobile-after-signin": {
+  "dialog": false,
+  "runs": "Gated action ran 1 times",
+  "me": "Signed in as: Omar Hassan",
+  "focus": "Run gated action",
+  "overflow": false
+ },
+ "mobile-signed-in-direct": {
+  "dialog": false,
+  "runs": "Gated action ran 2 times",
+  "me": "Signed in as: Omar Hassan",
+  "focus": "Run gated action",
+  "overflow": false
+ },
+ "guardSignedOut": "/en/auth?redirect=%2Fen%2Fdev%2Fguarded",
+ "guardWrongRole": "/en/account",
+ "errors": []
+}

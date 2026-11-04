@@ -1,0 +1,256 @@
+import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+
+import { authGate, closeAuthGate } from "@/features/auth/auth-gate"
+import { AuthDialog } from "@/features/auth/components/auth-dialog"
+import { ForgotFlow } from "@/features/auth/components/forgot-flow"
+import { LoginForm } from "@/features/auth/components/login-form"
+import { SignupFlow } from "@/features/auth/components/signup-flow"
+import { redirectSearch, signInDestination } from "@/features/auth/destination"
+import { publicUser } from "@/mocks/lib"
+import { db, resetDb } from "@/mocks/db"
+import { renderShell } from "./shell-render"
+
+// input-otp measures the page for its caret; jsdom has no layout.
+document.elementFromPoint = () => null
+
+const type = (label: string | RegExp, value: string) =>
+  fireEvent.change(screen.getByLabelText(label), { target: { value } })
+// The demo notice prints the code the mock "emailed".
+const demoCode = async () =>
+  (await screen.findByText(/Your code:/)).textContent.match(/\d{6}/)?.[0] ?? ""
+const enterCode = (code: string) =>
+  fireEvent.change(screen.getByLabelText("Verification code"), {
+    target: { value: code },
+  })
+
+describe("signInDestination", () => {
+  const user = (onboardingDone: boolean) => ({
+    ...publicUser(
+      db.users.find((u) => u.role === "dealership" && u.onboardingDone)!
+    ),
+    onboardingDone,
+  })
+  it("a new account does role selection first and keeps the redirect for the end", () => {
+    expect(signInDestination(user(false), "/en/post", "en")).toBe(
+      "/en/onboarding/role?redirect=%2Fen%2Fpost"
+    )
+  })
+  it("prefers redirect, then the dashboard, then role selection", () => {
+    expect(signInDestination(user(true), "/ar/post", "en")).toBe("/en/post")
+    expect(signInDestination(user(true), undefined, "en")).toBe("/en/dealer")
+    expect(signInDestination(user(false), undefined, "en")).toBe(
+      "/en/onboarding/role"
+    )
+  })
+  it("ignores an unsafe redirect param", () => {
+    for (const bad of ["//evil.com", "https://evil.com", "/\t/evil.com"])
+      expect(redirectSearch.parse({ redirect: bad }).redirect).toBeUndefined()
+    expect(redirectSearch.parse({ redirect: "/en/post" }).redirect).toBe(
+      "/en/post"
+    )
+  })
+})
+
+beforeEach(() => {
+  resetDb()
+  vi.stubEnv("VITE_DEMO", "true")
+  vi.stubGlobal("matchMedia", () => ({
+    matches: false,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }))
+  vi.stubGlobal("innerWidth", 1280)
+})
+afterEach(() => {
+  closeAuthGate()
+  vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
+})
+
+describe("LoginForm", () => {
+  it("logs in with email and password", async () => {
+    const onDone = vi.fn()
+    await renderShell(<LoginForm onDone={onDone} />)
+    type("Email", "dealer@demo.sy")
+    type("Password", "Demo1234")
+    fireEvent.click(screen.getByRole("button", { name: "Log in" }))
+    await waitFor(() => expect(onDone).toHaveBeenCalled())
+  })
+
+  it("stays quiet when an empty field loses focus, and flags it on submit", async () => {
+    await renderShell(<LoginForm onDone={vi.fn()} />)
+    const email = screen.getByLabelText("Email")
+    fireEvent.focus(email)
+    fireEvent.blur(email)
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.queryByText("Enter a valid email address")).toBeNull()
+    expect(email.getAttribute("aria-invalid")).not.toBe("true")
+    type("Email", "abc")
+    fireEvent.blur(email)
+    expect(await screen.findByText("Enter a valid email address")).toBeTruthy()
+    type("Email", "")
+    fireEvent.click(screen.getByRole("button", { name: "Log in" }))
+    expect(await screen.findByText("Enter a valid email address")).toBeTruthy()
+  })
+
+  it("says so on a wrong password and links to sign up and forgot", async () => {
+    await renderShell(<LoginForm onDone={vi.fn()} redirect="/en/post" />)
+    type("Email", "dealer@demo.sy")
+    type("Password", "wrong1234")
+    fireEvent.click(screen.getByRole("button", { name: "Log in" }))
+    expect(
+      await screen.findByText("The phone, email or password is not correct")
+    ).toBeTruthy()
+    expect(
+      screen.getByRole("link", { name: "Create account" }).getAttribute("href")
+    ).toBe("/en/auth/signup?redirect=%2Fen%2Fpost")
+    expect(
+      screen
+        .getByRole("link", { name: "Forgot password?" })
+        .getAttribute("href")
+    ).toBe("/en/auth/forgot")
+  })
+})
+
+describe("SignupFlow", () => {
+  const fill = (email = "new.person@example.com") => {
+    type("Full name", "New Person")
+    type("Email", email)
+    type("Password", "Passw0rd1")
+    type("Confirm password", "Passw0rd1")
+  }
+
+  it("needs matching passwords and the terms", async () => {
+    await renderShell(<SignupFlow onDone={vi.fn()} />)
+    fill()
+    type("Confirm password", "Passw0rd2")
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }))
+    expect(await screen.findByText("The passwords do not match")).toBeTruthy()
+    expect(screen.getByText("Accept the terms to continue")).toBeTruthy()
+  })
+
+  it("suggests a strong password, fills both fields and shows it", async () => {
+    await renderShell(<SignupFlow onDone={vi.fn()} />)
+    fireEvent.click(
+      screen.getByRole("button", { name: "Suggest a strong password" })
+    )
+    const pw = screen.getByLabelText<HTMLInputElement>("Password")
+    const confirm = screen.getByLabelText<HTMLInputElement>("Confirm password")
+    await waitFor(() => expect(pw.value).toHaveLength(16))
+    expect(confirm.value).toBe(pw.value)
+    expect(pw.type).toBe("text")
+    expect(confirm.type).toBe("text")
+    expect(await screen.findByText("Strong")).toBeTruthy()
+    expect(screen.getByRole("button", { name: "Copy password" })).toBeTruthy()
+  })
+
+  it("creates the account only after the code, then shows Email verified", async () => {
+    const onDone = vi.fn()
+    await renderShell(<SignupFlow onDone={onDone} />)
+    fill()
+    fireEvent.click(screen.getByRole("checkbox"))
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }))
+    const code = await demoCode()
+    expect(screen.getByText("new.person@example.com")).toBeTruthy()
+    expect(db.users.some((u) => u.email === "new.person@example.com")).toBe(
+      false
+    )
+    enterCode(code)
+    expect(
+      await screen.findByRole("heading", { name: "Email verified" })
+    ).toBeTruthy()
+    expect(
+      db.users.find((u) => u.email === "new.person@example.com")?.verifiedEmail
+    ).toBe(true)
+    expect(onDone).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }))
+    expect(onDone).toHaveBeenCalledOnce()
+  })
+
+  it("clears a wrong code and keeps the form when changing the email", async () => {
+    await renderShell(<SignupFlow onDone={vi.fn()} />)
+    fill()
+    fireEvent.click(screen.getByRole("checkbox"))
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }))
+    const code = await demoCode()
+    enterCode(code === "000000" ? "111111" : "000000")
+    expect(await screen.findByText("The code is not correct")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Change email" }))
+    expect(screen.getByLabelText<HTMLInputElement>("Full name").value).toBe(
+      "New Person"
+    )
+  })
+
+  it("refuses an email that already has an account", async () => {
+    await renderShell(<SignupFlow onDone={vi.fn()} />)
+    fill("dealer@demo.sy")
+    fireEvent.click(screen.getByRole("checkbox"))
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }))
+    expect(
+      await screen.findByText(
+        "An account with this email already exists. Log in instead."
+      )
+    ).toBeTruthy()
+  })
+})
+
+describe("ForgotFlow", () => {
+  it("resets the password with the emailed code", async () => {
+    const dealer = db.users.find((u) => u.email === "dealer@demo.sy")!
+    await renderShell(<ForgotFlow />)
+    type("Email", "dealer@demo.sy")
+    fireEvent.click(screen.getByRole("button", { name: "Send code" }))
+    enterCode(await demoCode())
+    await screen.findByRole("heading", { name: "Choose a new password" })
+    type("New password", "Newpass123")
+    type("Confirm password", "Newpass123")
+    fireEvent.click(screen.getByRole("button", { name: "Save password" }))
+    expect(
+      await screen.findByRole("heading", { name: "Password changed" })
+    ).toBeTruthy()
+    expect(dealer.password).toBe("Newpass123")
+    expect(
+      screen.getByRole("link", { name: "Log in" }).getAttribute("href")
+    ).toBe("/en/auth/login")
+  })
+})
+
+describe("AuthDialog", () => {
+  it("shows the gate reason and returns focus to the trigger on close", async () => {
+    await renderShell(
+      <>
+        <button
+          onClick={() =>
+            authGate.setState(() => ({
+              open: true,
+              reason: "auth.reason_message",
+              pending: null,
+            }))
+          }
+        >
+          trigger
+        </button>
+        <AuthDialog />
+      </>
+    )
+    const trigger = screen.getByRole("button", { name: "trigger" })
+    trigger.focus()
+    fireEvent.click(trigger)
+    expect(await screen.findByRole("dialog", { name: "Log in" })).toBeTruthy()
+    expect(screen.getByText("Sign in to send a message")).toBeTruthy()
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" })
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
+  })
+
+  it("swaps to sign up in place", async () => {
+    await renderShell(<AuthDialog />)
+    authGate.setState(() => ({ open: true, pending: null }))
+    await screen.findByRole("dialog", { name: "Log in" })
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }))
+    expect(
+      await screen.findByRole("dialog", { name: "Create your account" })
+    ).toBeTruthy()
+  })
+})

@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      # Same image and port as the postgres-test service in api/docker-compose.yml.
+      postgres:
+        image: postgres:18.3-alpine3.23
+        env:
+          POSTGRES_USER: sayaratak
+          POSTGRES_PASSWORD: sayaratak
+          POSTGRES_DB: sayaratak
+        ports:
+          - 5434:5432
+        options: >-
+          --health-cmd "pg_isready -U sayaratak"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      # Ignored, dev tools only (never in a production bundle or the api):
+      # seroval 1.5.6 inside solid-js inside @tanstack/devtools (the dev panel),
+      # zod 3 inside the shadcn CLI. Fixing them re-resolves the whole lockfile;
+      # drop these ids when devtools and shadcn are next upgraded.
+      - run: >-
+          bun audit --audit-level=high
+          --ignore=GHSA-p6vx-979v-rg4c --ignore=GHSA-jp82-f5mq-hwhp
+          --ignore=GHSA-97r2-qh9m-474h --ignore=GHSA-wp97-x4hv-qvhp
+          --ignore=GHSA-7rv5-mrxv-xcr9 --ignore=GHSA-9wx9-5pv9-3349
+          --ignore=GHSA-mrhx-c7xc-m3w5
+      - working-directory: packages/shared
+        run: bun run lint && bun run check
+      - working-directory: api
+        run: bun run typecheck
+      - working-directory: api
+        run: bun run lint
+      - working-directory: api
+        run: bun run check
+      # No .env in CI. Test-only values, not secrets; tests/setup.ts points
+      # DATABASE_URL at TEST_DATABASE_URL and migrates it.
+      - working-directory: api
+        run: bun run test
+        env:
+          NODE_ENV: test
+          APP_ENV: test
+          TEST_DATABASE_URL: postgres://sayaratak:sayaratak@localhost:5434/sayaratak
+          WEB_ORIGIN: http://localhost:3000
+          BETTER_AUTH_SECRET: ci-only-not-a-secret-0123456789abcdef
+          BETTER_AUTH_URL: http://localhost:4000
+          # The runner's pg_dump is not version 18; the service's image has the right one (8.11).
+          PG_CLIENT_CMD: docker run --rm -i --network host postgres:18.3-alpine3.23
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run lint
+      - run: bun run check
+      - run: bun run test
+      - run: bun run build
+      - run: bun run size

@@ -1,0 +1,10 @@
+{
+ "en-1280": "{\"h1\":\"Page not found\",\"dir\":\"ltr\",\"header\":true,\"mains\":1,\"overflow\":false,\"links\":[\"/en/search 40\",\"/en 40\"]}",
+ "ar-390": "{\"h1\":\"الصفحة غير موجودة\",\"dir\":\"rtl\",\"header\":true,\"mains\":1,\"overflow\":false,\"links\":[\"/ar/search 44\",\"/ar 44\"]}",
+ "ar-360": "{\"h1\":\"الصفحة غير موجودة\",\"dir\":\"rtl\",\"header\":true,\"mains\":1,\"overflow\":false,\"links\":[\"/ar/search 44\",\"/ar 44\"]}",
+ "en-root": "{\"h1\":\"الصفحة غير موجودة\",\"dir\":\"rtl\",\"header\":false,\"mains\":1,\"overflow\":false,\"links\":[\"/ar/search 40\",\"/ar 40\"]}",
+ "bannerBefore": false,
+ "bannerOffline": "أنت غير متصل بالإنترنت. لن تُحفظ التغييرات حتى يعود الاتصال.",
+ "bannerAfter": false,
+ "errors": []
+}

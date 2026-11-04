@@ -1,0 +1,14 @@
+# Allowlist: the API image takes only what it runs (api/Dockerfile).
+*
+!package.json
+!bun.lock
+!bunfig.toml
+!packages/shared/package.json
+!packages/shared/src
+!api/package.json
+!api/tsconfig.json
+!api/openapi.json
+!api/src
+!api/scripts
+!api/drizzle
+!web/package.json

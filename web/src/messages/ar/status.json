@@ -1,0 +1,11 @@
+{
+  "status.available": "متاح",
+  "status.reserved": "محجوز",
+  "status.sold": "تم البيع",
+  "status.rented": "مؤجَّر",
+  "status.pending": "قيد المراجعة",
+  "status.rejected": "مرفوض",
+  "status.removed": "محذوف",
+  "status.draft": "مسودة",
+  "status.approved": "معتمد"
+}

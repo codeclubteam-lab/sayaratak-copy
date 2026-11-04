@@ -1,0 +1,432 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource/ibm-plex-sans/latin-400.css";
+@import "@fontsource/ibm-plex-sans/latin-500.css";
+@import "@fontsource/ibm-plex-sans/latin-600.css";
+@import "@fontsource/ibm-plex-sans-arabic/400.css";
+@import "@fontsource/ibm-plex-sans-arabic/500.css";
+@import "@fontsource/ibm-plex-sans-arabic/600.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-family);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-deep-accent: var(--deep-accent);
+  --color-deep-foreground: var(--deep-foreground);
+  --color-deep: var(--deep);
+  --color-signal-foreground: var(--signal-foreground);
+  --color-signal: var(--signal);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
+  --radius-2xl: calc(var(--radius) * 2);
+  --radius-3xl: calc(var(--radius) * 2.5);
+  --radius-4xl: calc(var(--radius) * 3);
+}
+
+/* Literal tokens. The shadow is only for floating layers: popover, dialog, sheet, toast. */
+@theme {
+  --shadow-floating: 0 8px 24px oklch(0.2 0.01 160 / 0.1);
+  --default-transition-duration: var(--dur-fast);
+  --default-transition-timing-function: var(--ease-standard);
+  --animate-heart-pop: heart-pop 200ms var(--ease-standard);
+  @keyframes heart-pop {
+    from {
+      transform: scale(0.85);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+}
+
+:root {
+  /* Per-language family (A5). The Arabic family carries its own Latin glyphs, so mixed text keeps one set of proportions. */
+  --font-family: "IBM Plex Sans", sans-serif;
+  --background: oklch(0.966 0.004 150);
+  --foreground: oklch(0.2 0.012 160);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.43 0.085 163);
+  --primary-foreground: oklch(0.985 0.003 150);
+  --secondary: var(--muted);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.952 0.005 150);
+  --muted-foreground: oklch(0.46 0.012 160);
+  --accent: oklch(0.93 0.028 163);
+  --accent-foreground: oklch(0.32 0.07 163);
+  --signal: oklch(0.82 0.16 82);
+  --signal-foreground: oklch(0.26 0.05 80);
+  /* Deep Nile green: the banner surface and its text. */
+  --deep: oklch(0.27 0.05 163);
+  --deep-foreground: oklch(0.99 0.004 150);
+  --deep-accent: oklch(0.8 0.09 160);
+  --success: oklch(0.5 0.13 150);
+  --warning: oklch(0.48 0.09 65);
+  --destructive: oklch(0.53 0.2 27);
+  --border: oklch(0.915 0.005 150);
+  --input: oklch(0.64 0.012 160);
+  --ring: oklch(0.43 0.085 163);
+  --chart-1: var(--primary);
+  --chart-2: var(--signal);
+  --chart-3: oklch(0.55 0.02 170);
+  --chart-4: oklch(0.55 0.07 200);
+  --chart-5: oklch(0.5 0.1 350);
+  --radius: 0.5rem;
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--accent);
+  --sidebar-accent-foreground: var(--accent-foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+
+  /* Type roles (A5): English size and line height; Arabic overrides below. */
+  --text-caption: 0.75rem;
+  --leading-caption: 1rem;
+  --text-ui: 0.875rem;
+  --leading-ui: 1.25rem;
+  --text-body: 1rem;
+  --leading-body: 1.625rem;
+  --text-lead: 1.125rem;
+  --leading-lead: 1.75rem;
+  --text-title: 1.25rem;
+  --leading-title: 1.75rem;
+  --text-page: 1.5rem;
+  --leading-page: 2rem;
+  --text-hero: 2rem;
+  --leading-hero: 2.5rem;
+
+  /* z-index scale (A5): use as z-(--z-popover). */
+  --z-sticky: 30;
+  --z-popover: 50;
+  --z-dialog: 60;
+  --z-toast: 70;
+
+  /* Motion tokens (A5b). Nothing in app code uses a literal duration or easing. */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --dur-press: 80ms;
+  --dur-fast: 120ms;
+  --dur-base: 160ms;
+  --dur-sheet: 220ms;
+  /* Hero carousel: the time one slide stays. It is the length of the active dot's fill, which is the autoplay timer, so reduced motion leaves it alone (autoplay is off then, see `carousel-fill`). */
+  --dur-carousel: 6s;
+  /* Form control and list-row heights (A5): 44 for touch below md, denser from md. Controls are inputs, selects, buttons, chips; rows are checkbox and radio lines. */
+  /* A field never sits white on white: white on the grey page, the muted tone inside a white surface (card, dialog, sheet, popover; see the base layer). */
+  --field: var(--card);
+  --control-h: 2.75rem;
+  --row-h: 2.75rem;
+}
+@media (min-width: 48rem) {
+  :root {
+    --control-h: 2.25rem;
+    --row-h: 2rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-press: 0ms;
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-sheet: 0ms;
+  }
+}
+
+/* Arabic reads smaller at equal pixels, so it gets larger sizes and taller lines. */
+[lang="ar"] {
+  --font-family: "IBM Plex Sans Arabic", sans-serif;
+  --text-caption: 0.8125rem;
+  --leading-caption: 1.25rem;
+  --text-ui: 0.9375rem;
+  --leading-ui: 1.5rem;
+  --text-body: 1.0625rem;
+  --leading-body: 1.75rem;
+  --text-lead: 1.1875rem;
+  --leading-lead: 1.875rem;
+  --text-title: 1.3125rem;
+  --leading-title: 1.875rem;
+  --text-page: 1.5625rem;
+  --leading-page: 2.25rem;
+  --text-hero: 2.0625rem;
+  --leading-hero: 2.875rem;
+}
+
+@utility text-caption {
+  font-size: var(--text-caption);
+  line-height: var(--leading-caption);
+}
+@utility text-ui {
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+}
+@utility text-body {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  text-wrap: pretty;
+}
+@utility text-lead {
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  text-wrap: pretty;
+}
+@utility text-title {
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+  text-wrap: balance;
+}
+@utility text-page {
+  font-size: var(--text-page);
+  line-height: var(--leading-page);
+  text-wrap: balance;
+}
+@utility text-hero {
+  font-size: var(--text-hero);
+  line-height: var(--leading-hero);
+  text-wrap: balance;
+}
+
+/* The active carousel dot's fill. Its `animationend` moves to the next slide, so it is the only timer; a `data-paused` ancestor (hover, focus, hidden tab, the pause button) holds it. Under reduced motion the global rule below zeroes every animation, which would end this one at once, so it keeps its duration and the carousel starts paused. */
+@keyframes carousel-fill {
+  from {
+    inline-size: 0;
+  }
+  to {
+    inline-size: 100%;
+  }
+}
+@utility carousel-fill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  border-radius: inherit;
+  background: currentColor;
+  animation: carousel-fill var(--dur-carousel) linear forwards;
+  [data-paused] & {
+    animation-play-state: paused;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    animation-duration: var(--dur-carousel) !important;
+  }
+}
+
+@utility num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Motion utilities (A5b): colors, opacity and the pressed state. Never `transition-all`. */
+@utility motion-color {
+  transition-property:
+    color, background-color, border-color, text-decoration-color;
+  transition-duration: var(--dur-fast);
+  transition-timing-function: var(--ease-standard);
+}
+@utility motion-fade {
+  transition-property: opacity;
+  transition-duration: var(--dur-base);
+  transition-timing-function: var(--ease-standard);
+}
+@utility press {
+  transition-property: transform, color, background-color, border-color;
+  transition-duration:
+    var(--dur-press), var(--dur-fast), var(--dur-fast), var(--dur-fast);
+  transition-timing-function: var(--ease-standard);
+  @media (prefers-reduced-motion: no-preference) {
+    &:active:not(:disabled, [aria-disabled="true"]) {
+      transform: scale(0.97);
+    }
+  }
+}
+
+/* Text fields and the select trigger: one focus treatment instead of the global outline stacked on a border. The border turns green and a soft ring grows in over the base duration; hover darkens the border a little. */
+@utility field-surface {
+  caret-color: var(--primary);
+  transition-property: border-color, box-shadow;
+  transition-duration: var(--dur-base);
+  transition-timing-function: var(--ease-standard);
+  &:hover:not(
+      :focus-visible,
+      :disabled,
+      [data-popup-open],
+      [aria-invalid="true"]
+    ) {
+    border-color: color-mix(in oklch, var(--input), var(--foreground) 35%);
+  }
+  &:focus-visible,
+  &[data-popup-open] {
+    outline: none;
+    border-color: var(--ring);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--ring) 16%, transparent);
+  }
+  &[aria-invalid="true"]:focus-visible {
+    border-color: var(--destructive);
+    box-shadow: 0 0 0 3px
+      color-mix(in oklch, var(--destructive) 16%, transparent);
+  }
+}
+
+/* Select and dropdown menu share one surface and one row: a hairline ring under the floating shadow, roomy rows, and a soft green highlight. */
+@utility menu-surface {
+  @apply rounded-xl bg-popover p-1.5 text-popover-foreground shadow-floating ring-1 ring-foreground/10;
+}
+@utility menu-row {
+  @apply relative flex min-h-11 w-full cursor-pointer items-center gap-2.5 rounded-lg px-3 text-ui outline-hidden select-none md:min-h-9;
+  transition-property: background-color, color;
+  transition-duration: var(--dur-fast);
+  transition-timing-function: var(--ease-standard);
+  &[data-highlighted] {
+    @apply bg-accent text-accent-foreground;
+  }
+  &[data-disabled] {
+    @apply pointer-events-none opacity-50;
+  }
+  & svg {
+    @apply pointer-events-none shrink-0;
+  }
+}
+
+@layer base {
+  .bg-card,
+  .bg-popover {
+    --field: var(--muted);
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-body text-foreground;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  html {
+    @apply font-sans;
+    scrollbar-gutter: stable;
+  }
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* One scrollbar for every scroller (the page, sheets, menus, lists): thin, a rounded thumb in a tint of the text color, no track. Firefox takes the standard properties; Chrome, Edge and Safari take the pseudo-elements, which also give the hover and the gap around the thumb (Chrome ignores them once the standard properties are set, hence the split). A scroller that hides its bar on purpose says so with its own class and wins on specificity. */
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: color-mix(in oklab, var(--foreground) 28%, transparent)
+        transparent;
+    }
+  }
+  @supports selector(::-webkit-scrollbar) {
+    ::-webkit-scrollbar {
+      width: 12px;
+      height: 12px;
+    }
+    ::-webkit-scrollbar-track,
+    ::-webkit-scrollbar-corner {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      border: 3px solid transparent;
+      border-radius: 9999px;
+      background-clip: content-box;
+      background-color: color-mix(in oklab, var(--foreground) 28%, transparent);
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background-color: color-mix(in oklab, var(--foreground) 48%, transparent);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Images fade in from their placeholder color once the file loads. The hidden state needs the `js` class that the root head script adds before first paint, so without JavaScript every image shows. */
+img[data-fade] {
+  transition: opacity var(--dur-base) var(--ease-standard);
+}
+.js img[data-fade]:not([data-loaded]) {
+  opacity: 0;
+}
+
+/* Route change: the page content cross fades. Header, footer and tab bar carry their own view-transition-name, so they stay still. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--dur-base);
+  animation-timing-function: var(--ease-standard);
+}
+::view-transition-group(listing-cover) {
+  animation-duration: var(--dur-sheet);
+  animation-timing-function: var(--ease-standard);
+}
+/* The auth side panel cross fades its own headline and screenshot, so the page cross fade leaves it alone. */
+::view-transition-group(auth-panel),
+::view-transition-old(auth-panel),
+::view-transition-new(auth-panel) {
+  animation: none;
+}
+html[data-data-saver]::view-transition-group(*),
+html[data-data-saver]::view-transition-old(*),
+html[data-data-saver]::view-transition-new(*) {
+  animation: none;
+}
+
+/* A pressed toggle takes the primary fill, as a selected chip does. The default pressed fill (muted) is 1.03:1 on the page background, so the chosen option was invisible. Outside any layer so it also beats the item's own hover fill. */
+[data-slot="toggle"][aria-pressed="true"],
+[data-slot="toggle-group-item"][aria-pressed="true"] {
+  border-color: var(--primary);
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}

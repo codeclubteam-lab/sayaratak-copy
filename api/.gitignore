@@ -1,0 +1,6 @@
+node_modules
+.env
+plan/
+backups/
+demo/
+*-firebase-adminsdk-*.json

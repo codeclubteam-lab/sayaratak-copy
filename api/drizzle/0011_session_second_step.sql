@@ -1,0 +1,1 @@
+ALTER TABLE "session" ADD COLUMN "second_step" boolean DEFAULT false NOT NULL;

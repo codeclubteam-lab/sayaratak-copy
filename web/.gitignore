@@ -1,0 +1,30 @@
+node_modules
+.DS_Store
+dist
+dist-ssr
+*.local
+.env*
+.nitro
+.tanstack
+.wrangler
+.output
+.vinxi
+__unconfig*
+todos.json
+
+# typescript
+*.tsbuildinfo
+
+# project plan and progress (local only; docs/ is committed)
+plan/
+
+# playwright
+playwright-report
+test-results
+!.env.example
+
+# full-size design sources (the optimized copies live in public/images)
+assets-src/
+
+# screenshots from `bun run shots` (regenerate, do not commit)
+docs/screens/

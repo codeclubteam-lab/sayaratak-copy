@@ -1,0 +1,399 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "root": true,
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": [
+      "api/**",
+      "packages/shared/**",
+      "!api/plan",
+      "!api/drizzle",
+      "!api/openapi.json",
+      "!api/scripts/bootstrap-data.ts",
+      "!**/*.md"
+    ]
+  },
+  "assist": {
+    "enabled": false
+  },
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 80
+  },
+  "javascript": {
+    "formatter": {
+      "semicolons": "asNeeded",
+      "quoteStyle": "double",
+      "trailingCommas": "es5"
+    }
+  },
+  "linter": {
+    "rules": {
+      "preset": "recommended",
+      "suspicious": {
+        "noConsole": "error"
+      },
+      "nursery": {
+        "noFloatingPromises": "error",
+        "noMisusedPromises": "error",
+        "useAwaitThenable": "error"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["api/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveLinesPerFunction": {
+              "level": "error",
+              "options": {
+                "maxLines": 40
+              }
+            },
+            "noExcessiveCognitiveComplexity": {
+              "level": "error",
+              "options": {
+                "maxAllowedComplexity": 10
+              }
+            },
+            "useMaxParams": {
+              "level": "error",
+              "options": {
+                "max": 3
+              }
+            }
+          },
+          "style": {
+            "noExcessiveLinesPerFile": {
+              "level": "error",
+              "options": {
+                "maxLines": 200
+              }
+            },
+            "noNestedTernary": "error",
+            "noUselessElse": "error",
+            "noDefaultExport": "error",
+            "useFilenamingConvention": {
+              "level": "error",
+              "options": {
+                "filenameCases": ["kebab-case"]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["api/src/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/web/**", "@/**"],
+                    "message": "api/src never imports web code (A4). Only scripts and tests may import web/src/mocks."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["api/src/modules/**/*.routes.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/web/**", "@/**"],
+                    "message": "api/src never imports web code (A4). Only scripts and tests may import web/src/mocks."
+                  },
+                  {
+                    "group": ["**/*.queries", "**/*.tables", "**/*.mapper"],
+                    "message": "A17.2: a routes file calls its own service only, never queries, tables or mappers."
+                  },
+                  {
+                    "group": ["~/modules/**/*.service"],
+                    "message": "A17.2: a routes file calls its own module's service (./<m>.service)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["api/src/modules/**/*.service.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/web/**", "@/**"],
+                    "message": "api/src never imports web code (A4). Only scripts and tests may import web/src/mocks."
+                  },
+                  {
+                    "group": [
+                      "**/*.routes",
+                      "**/*.tables",
+                      "hono",
+                      "hono/**",
+                      "drizzle-orm",
+                      "drizzle-orm/**"
+                    ],
+                    "message": "A17.1: a service holds rules only: no Hono types, no tables, no SQL."
+                  },
+                  {
+                    "group": [
+                      "~/modules/**/*.queries",
+                      "~/modules/**/*.mapper"
+                    ],
+                    "message": "A17.2: another module is reached through its service only."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["api/src/modules/**/*.queries.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/web/**", "@/**"],
+                    "message": "api/src never imports web code (A4). Only scripts and tests may import web/src/mocks."
+                  },
+                  {
+                    "group": [
+                      "**/*.routes",
+                      "**/*.service",
+                      "**/*.mapper",
+                      "~/shared/http/**",
+                      "hono",
+                      "hono/**"
+                    ],
+                    "message": "A17.1: queries hold database reads and writes only: no rules, no fail.*, no response shaping."
+                  },
+                  {
+                    "group": ["~/modules/**"],
+                    "message": "A17.1: queries touch their own module's tables only (./<m>.tables)."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["api/src/modules/**/*.tables.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/web/**", "@/**"],
+                    "message": "api/src never imports web code (A4). Only scripts and tests may import web/src/mocks."
+                  },
+                  {
+                    "group": [
+                      "**/*.routes",
+                      "**/*.service",
+                      "**/*.queries",
+                      "**/*.mapper",
+                      "~/shared/http/**"
+                    ],
+                    "message": "A17.1: tables hold definitions only."
+                  }
+                ],
+                "paths": {
+                  "drizzle-orm/pg-core": {
+                    "importNames": ["jsonb"],
+                    "message": "Bun SQL stores Drizzle's jsonb as a JSON string; use jsonb from ~/shared/db/jsonb."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["api/src/modules/**/*.mapper.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/web/**", "@/**"],
+                    "message": "api/src never imports web code (A4). Only scripts and tests may import web/src/mocks."
+                  },
+                  {
+                    "group": [
+                      "**/*.routes",
+                      "**/*.service",
+                      "**/*.queries",
+                      "~/shared/**",
+                      "hono",
+                      "hono/**",
+                      "drizzle-orm",
+                      "drizzle-orm/**"
+                    ],
+                    "message": "A17.1: a mapper is pure: no I/O and no other layer."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["api/src/shared/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/web/**", "@/**"],
+                    "message": "api/src never imports web code (A4). Only scripts and tests may import web/src/mocks."
+                  },
+                  {
+                    "group": ["~/modules/**", "**/modules/**"],
+                    "message": "A17.2: shared never imports from modules."
+                  }
+                ],
+                "paths": {
+                  "drizzle-orm/pg-core": {
+                    "importNames": ["jsonb"],
+                    "message": "Bun SQL stores Drizzle's jsonb as a JSON string; use jsonb from ~/shared/db/jsonb."
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["api/src/jobs/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/web/**", "@/**"],
+                    "message": "api/src never imports web code (A4). Only scripts and tests may import web/src/mocks."
+                  },
+                  {
+                    "group": [
+                      "**/*.routes",
+                      "**/*.queries",
+                      "**/*.tables",
+                      "**/*.mapper",
+                      "~/shared/db/**"
+                    ],
+                    "message": "A17.2: a job calls module services only."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["api/**/*.test.ts", "api/tests/**"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveLinesPerFunction": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["**/*.config.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noDefaultExport": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["api/src/**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["api/src/shared/db/schema.ts"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "patterns": [
+                  {
+                    "group": ["**/web/**", "@/**"],
+                    "message": "api/src never imports web code (A4). Only scripts and tests may import web/src/mocks."
+                  },
+                  {
+                    "group": ["~/modules/**", "!~/modules/*/*.tables"],
+                    "message": "A3: schema.ts re-exports module tables only."
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+CREATE INDEX "listings_lat_lng_index" ON "listings" USING btree ("lat","lng");

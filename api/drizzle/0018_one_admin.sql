@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "user_one_admin" ON "user" USING btree ("role") WHERE "user"."role" = 'admin';

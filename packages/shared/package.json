@@ -1,0 +1,19 @@
+{
+  "name": "@sayaratak/shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "scripts": {
+    "lint": "biome lint .",
+    "format": "biome format --write .",
+    "check": "biome format ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.6.4"
+  }
+}

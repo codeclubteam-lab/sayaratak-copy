@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "uploads_cloudinary_id_index" ON "uploads" USING btree ("cloudinary_id");

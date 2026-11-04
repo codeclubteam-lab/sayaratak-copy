@@ -1,0 +1,4 @@
+web/.output/
+web/node_modules/
+web/.tanstack/
+web/dist/

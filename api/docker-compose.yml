@@ -1,0 +1,37 @@
+# Local dev and test databases only. Credentials here are not secrets.
+name: sayaratak
+x-postgres: &postgres
+  image: postgres:18.3-alpine3.23
+  environment:
+    POSTGRES_USER: sayaratak
+    POSTGRES_PASSWORD: sayaratak
+    POSTGRES_DB: sayaratak
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U sayaratak -d sayaratak"]
+    interval: 2s
+    timeout: 3s
+    retries: 15
+
+services:
+  postgres:
+    <<: *postgres
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql"]
+
+  postgres-test:
+    <<: *postgres
+    ports: ["5434:5432"]
+    tmpfs: ["/var/lib/postgresql"]
+    # The tmpfs is small (memory): WAL capped well under it, and no fsync for
+    # a database that is thrown away. The default 1 GB WAL filled it.
+    command:
+      - postgres
+      - -c
+      - max_wal_size=128MB
+      - -c
+      - fsync=off
+      - -c
+      - full_page_writes=off
+
+volumes:
+  pgdata:

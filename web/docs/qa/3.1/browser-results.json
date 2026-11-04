@@ -1,0 +1,204 @@
+{
+  "findings": [
+    {
+      "locale": "en",
+      "dir": "ltr",
+      "width": 360,
+      "scrollWidth": 360,
+      "headerHeight": 56,
+      "primaryLinks": [],
+      "overlaps": false,
+      "tabsVisible": true,
+      "canonical": "http://localhost:3000/en",
+      "title": "Home | Sayaratak"
+    },
+    {
+      "locale": "en",
+      "dir": "ltr",
+      "width": 390,
+      "scrollWidth": 390,
+      "headerHeight": 56,
+      "primaryLinks": [],
+      "overlaps": false,
+      "tabsVisible": true,
+      "canonical": "http://localhost:3000/en",
+      "title": "Home | Sayaratak"
+    },
+    {
+      "locale": "en",
+      "dir": "ltr",
+      "width": 768,
+      "scrollWidth": 768,
+      "headerHeight": 56,
+      "primaryLinks": [],
+      "overlaps": false,
+      "tabsVisible": false,
+      "canonical": "http://localhost:3000/en",
+      "title": "Home | Sayaratak"
+    },
+    {
+      "locale": "en",
+      "dir": "ltr",
+      "width": 1024,
+      "scrollWidth": 1024,
+      "headerHeight": 64,
+      "primaryLinks": [
+        "Cars",
+        "Trucks",
+        "Motorcycles",
+        "Parts",
+        "Rentals"
+      ],
+      "overlaps": false,
+      "tabsVisible": false,
+      "canonical": "http://localhost:3000/en",
+      "title": "Home | Sayaratak"
+    },
+    {
+      "locale": "en",
+      "dir": "ltr",
+      "width": 1280,
+      "scrollWidth": 1280,
+      "headerHeight": 64,
+      "primaryLinks": [
+        "Cars",
+        "Trucks",
+        "Motorcycles",
+        "Parts",
+        "Rentals",
+        "Dealerships",
+        "Workshops",
+        "Mechanics"
+      ],
+      "overlaps": false,
+      "tabsVisible": false,
+      "canonical": "http://localhost:3000/en",
+      "title": "Home | Sayaratak"
+    },
+    {
+      "locale": "en",
+      "dir": "ltr",
+      "width": 1536,
+      "scrollWidth": 1536,
+      "headerHeight": 64,
+      "primaryLinks": [
+        "Cars",
+        "Trucks",
+        "Motorcycles",
+        "Parts",
+        "Rentals",
+        "Dealerships",
+        "Workshops",
+        "Mechanics"
+      ],
+      "overlaps": false,
+      "tabsVisible": false,
+      "canonical": "http://localhost:3000/en",
+      "title": "Home | Sayaratak"
+    },
+    {
+      "locale": "ar",
+      "dir": "rtl",
+      "width": 360,
+      "scrollWidth": 360,
+      "headerHeight": 56,
+      "primaryLinks": [],
+      "overlaps": false,
+      "tabsVisible": true,
+      "canonical": "http://localhost:3000/ar",
+      "title": "الرئيسية | Sayaratak"
+    },
+    {
+      "locale": "ar",
+      "dir": "rtl",
+      "width": 390,
+      "scrollWidth": 390,
+      "headerHeight": 56,
+      "primaryLinks": [],
+      "overlaps": false,
+      "tabsVisible": true,
+      "canonical": "http://localhost:3000/ar",
+      "title": "الرئيسية | Sayaratak"
+    },
+    {
+      "locale": "ar",
+      "dir": "rtl",
+      "width": 768,
+      "scrollWidth": 768,
+      "headerHeight": 56,
+      "primaryLinks": [],
+      "overlaps": false,
+      "tabsVisible": false,
+      "canonical": "http://localhost:3000/ar",
+      "title": "الرئيسية | Sayaratak"
+    },
+    {
+      "locale": "ar",
+      "dir": "rtl",
+      "width": 1024,
+      "scrollWidth": 1024,
+      "headerHeight": 64,
+      "primaryLinks": [
+        "سيارات",
+        "شاحنات",
+        "دراجات نارية",
+        "قطع غيار",
+        "إيجارات"
+      ],
+      "overlaps": false,
+      "tabsVisible": false,
+      "canonical": "http://localhost:3000/ar",
+      "title": "الرئيسية | Sayaratak"
+    },
+    {
+      "locale": "ar",
+      "dir": "rtl",
+      "width": 1280,
+      "scrollWidth": 1280,
+      "headerHeight": 64,
+      "primaryLinks": [
+        "سيارات",
+        "شاحنات",
+        "دراجات نارية",
+        "قطع غيار",
+        "إيجارات",
+        "معارض",
+        "ورش",
+        "ميكانيكيون"
+      ],
+      "overlaps": false,
+      "tabsVisible": false,
+      "canonical": "http://localhost:3000/ar",
+      "title": "الرئيسية | Sayaratak"
+    },
+    {
+      "locale": "ar",
+      "dir": "rtl",
+      "width": 1536,
+      "scrollWidth": 1536,
+      "headerHeight": 64,
+      "primaryLinks": [
+        "سيارات",
+        "شاحنات",
+        "دراجات نارية",
+        "قطع غيار",
+        "إيجارات",
+        "معارض",
+        "ورش",
+        "ميكانيكيون"
+      ],
+      "overlaps": false,
+      "tabsVisible": false,
+      "canonical": "http://localhost:3000/ar",
+      "title": "الرئيسية | Sayaratak"
+    }
+  ],
+  "checks": {
+    "languageRawSearch": "/en?city=x&city=y#results",
+    "focusReturned": "القائمة",
+    "saverReload": true,
+    "saverSSR": true,
+    "contactOnly": true
+  },
+  "errors": []
+}
