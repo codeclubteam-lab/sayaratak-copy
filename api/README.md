@@ -20,6 +20,11 @@ bun run dev                   # http://localhost:4000, restarts on change
 Service keys (Google, Cloudinary, SMTP, R2, Firebase, Apple) are optional in development and
 required when `APP_ENV=production`. The full list is in `.env.example`.
 
+App developers: [docs/MOBILE.md](docs/MOBILE.md) has a bearer-token walkthrough for listings,
+uploads, messages and push. Browse the read-only contract at `http://localhost:4000/api/docs`
+in development; that page returns 404 in production. The JSON contract remains available at
+`/api/v1/openapi.json`.
+
 ## Commands (run in `api/`)
 
 | Command | What it does |

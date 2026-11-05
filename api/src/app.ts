@@ -12,6 +12,7 @@ import { onError, onNotFound } from "~/shared/http/errors"
 import { healthRoutes } from "~/shared/http/health"
 import { requestLog } from "~/shared/http/request-log"
 import { buildOpenApi } from "~/shared/openapi/build"
+import { docsRoutes } from "~/shared/openapi/docs"
 import { spec } from "~/shared/openapi/registry"
 import { session } from "~/modules/auth/auth.middleware"
 import { adminListingsRoutes } from "~/modules/admin-listings/admin-listings.routes"
@@ -160,5 +161,6 @@ export const app = new Hono()
     })
   )
   .use(csrfOrigin(webOrigin))
+  .route("/api", docsRoutes(env.APP_ENV))
   .route("/api/health", healthRoutes())
   .route("/api/v1", v1)
