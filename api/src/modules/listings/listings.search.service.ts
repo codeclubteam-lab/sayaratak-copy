@@ -15,6 +15,8 @@ import {
 } from "./listings.filters.queries"
 import { capPaid } from "./listings.ranking.service"
 import { listHiddenOwnerIds } from "./listings.read.service"
+import { countFacets } from "./listings.facets.queries"
+import { listRelevanceIds } from "./listings.relevance.queries"
 import * as q from "./listings.search.queries"
 import { toListings } from "./listings.view.service"
 
@@ -40,17 +42,22 @@ export async function searchListings(search: Search) {
   const scope = await scopeOf(db, params)
   const size = pageSizeOf(search.limit)
   const window = { offset: (params.page - 1) * size, size }
-  // The page and the five facet counts are independent reads.
-  const [page, facets] = await Promise.all([
+  // The page and the five facet counts are independent reads, except that the facet pass also
+  // counts the matches, so the page does not count them again (a rail with `exclude` does: it
+  // leaves one listing out).
+  const counted = facetsOf(db, params, scope)
+  const total = search.exclude ? undefined : counted.then((c) => c.total)
+  const [page, { facets }] = await Promise.all([
     q.isRelevance(params)
-      ? relevancePage(db, { ...search, scope, window })
+      ? relevancePage(db, { ...search, scope, window, total })
       : q.listSearchPage(db, {
           params,
           scope,
           exclude: search.exclude,
           page: window,
+          total,
         }),
-    facetsOf(db, params, scope),
+    counted,
   ])
   return {
     items: await toListings(db, page.rows, search.viewer),
@@ -67,14 +74,16 @@ async function relevancePage(
   search: Search & {
     scope: SearchScope
     window: { offset: number; size: number }
+    total?: Promise<number | undefined>
   }
 ) {
   const { offset, size } = search.window
-  const ids = await q.listRelevanceIds(ex, {
+  const ids = await listRelevanceIds(ex, {
     params: search.params,
     scope: search.scope,
     exclude: search.exclude,
     organicLimit: offset + size,
+    total: search.total,
   })
   const order = capPaid(ids.featured, ids.organic)
   const rows = await q.listByIds(ex, order.slice(offset, offset + size))
@@ -122,16 +131,18 @@ async function facetsOf(
   params: SearchParams,
   scope: SearchScope
 ) {
-  const counts = await Promise.all(
-    FACET_KEYS.map((key) => q.countFacet(ex, { params, scope, key }))
-  )
+  const { counts, total } = await countFacets(ex, {
+    params,
+    scope,
+    keys: FACET_KEYS,
+  })
   const sorted = counts.map((rows) =>
     rows
       .map((row) => ({ value: row.value, count: row.count }))
       .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value))
   )
   const [type = [], make = [], fuel = [], transmission = [], city = []] = sorted
-  return { type, make, fuel, transmission, city }
+  return { facets: { type, make, fuel, transmission, city }, total }
 }
 
 // Mock `pageParams`: `limit` 1 to 24 for rails, else the page of 24.

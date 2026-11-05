@@ -3,12 +3,9 @@ import {
   and,
   asc,
   between,
-  count,
   desc,
   inArray,
-  isNotNull,
   ne,
-  not,
   type SQL,
   sql,
 } from "drizzle-orm"
@@ -18,26 +15,31 @@ import type { Box } from "~/shared/geo/box"
 
 import {
   distanceKm,
-  type FacetKey,
-  hasMedia,
   type SearchScope,
   searchWhere,
 } from "./listings.filters.queries"
 import { listings } from "./listings.tables"
 
-const FACET_COLUMNS = {
-  type: listings.vehicleType,
-  make: listings.makeId,
-  fuel: listings.fuel,
-  transmission: listings.transmission,
-  city: listings.cityId,
-}
 // A bump puts a listing back at the top as if it had just been posted.
-const posted = sql`coalesce(${listings.bumpedAt}, ${listings.createdAt})`
+export const posted = sql`coalesce(${listings.bumpedAt}, ${listings.createdAt})`
+
+/**
+ * How many rows match: the number the facet pass already counted (`known`, unset or undefined
+ * when that pass could not), else a count query of its own.
+ */
+export async function totalOf(
+  ex: Executor,
+  where: SQL | undefined,
+  known?: Promise<number | undefined>
+) {
+  return (await known) ?? ex.$count(listings, where)
+}
 
 /**
  * One page of a public search with the total. Ties keep id order, which is
- * the mock's array order for the seed (a stable JS sort).
+ * the mock's array order for the seed (a stable JS sort). The total is not a window count
+ * (`count(*) over ()`): that carries every wide matching row through a window, 64 ms for a deep
+ * page at 50,000 listings, where the page alone reads an index and stops (10.6).
  */
 export async function listSearchPage(
   ex: Executor,
@@ -46,57 +48,21 @@ export async function listSearchPage(
     scope: SearchScope
     exclude?: string
     page: { offset: number; size: number }
-  }
-) {
-  const { params } = search
-  const where = whereOf(search)
-  const rows = await ex
-    .select({
-      listing: listings,
-      total: sql<number>`count(*) over ()`.mapWith(Number),
-    })
-    .from(listings)
-    .where(where)
-    .orderBy(...orderOf(params), asc(listings.id))
-    .offset(search.page.offset)
-    .limit(search.page.size)
-  const total = rows[0]?.total ?? (await ex.$count(listings, where))
-  return { rows: rows.map((row) => row.listing), total }
-}
-
-/**
- * Relevance (A11): every matching Featured id, and organic ids in ranking
- * order up to `organicLimit` (the page's last slot can need no more).
- * Featured keep ranking order too, so equal turns break ties as the mock.
- */
-export async function listRelevanceIds(
-  ex: Executor,
-  search: {
-    params: SearchParams
-    scope: SearchScope
-    exclude?: string
-    organicLimit: number
+    total?: Promise<number | undefined>
   }
 ) {
   const where = whereOf(search)
-  const featured = inArray(listings.id, [...search.scope.featuredIds, ""])
-  const ids = (filter: SQL | undefined, limit?: number) => {
-    const query = ex
-      .select({ id: listings.id })
+  const [rows, total] = await Promise.all([
+    ex
+      .select()
       .from(listings)
-      .where(and(where, filter))
-      .orderBy(desc(hasMedia()), desc(posted), asc(listings.id))
-      .$dynamic()
-    return (limit === undefined ? query : query.limit(limit)).then((rows) =>
-      rows.map((row) => row.id)
-    )
-  }
-  const [paid, organic, total] = await Promise.all([
-    ids(featured),
-    ids(not(featured), search.organicLimit),
-    ex.$count(listings, where),
+      .where(where)
+      .orderBy(...orderOf(search.params), asc(listings.id))
+      .offset(search.page.offset)
+      .limit(search.page.size),
+    totalOf(ex, where, search.total),
   ])
-  return { featured: paid, organic, total }
+  return { rows, total }
 }
 
 /**
@@ -137,36 +103,7 @@ export async function listByIds(ex: Executor, ids: string[]) {
   return ids.flatMap((id) => byId.get(id) ?? [])
 }
 
-/** Counts per value of one facet, with that facet's own filter left out (disjunctive). */
-export async function countFacet(
-  ex: Executor,
-  facet: { params: SearchParams; scope: SearchScope; key: FacetKey }
-) {
-  const where = searchWhere(facet.params, facet.scope, facet.key)
-  if (facet.key === "type" && facet.params.kind === "part")
-    return countFits(ex, where)
-  const value = FACET_COLUMNS[facet.key]
-  return ex
-    .select({ value: sql<string>`${value}`, count: count() })
-    .from(listings)
-    .where(and(where, isNotNull(value)))
-    .groupBy(value)
-}
-
-// A part counts once for each type it fits. Counted here, not in SQL:
-// unnest cannot sit in a WHERE, and parts fit at most five types.
-async function countFits(ex: Executor, where: SQL | undefined) {
-  const rows = await ex
-    .select({ types: listings.compatibleTypes })
-    .from(listings)
-    .where(where)
-  const counts = new Map<string, number>()
-  for (const type of rows.flatMap((row) => row.types))
-    counts.set(type, (counts.get(type) ?? 0) + 1)
-  return [...counts].map(([value, total]) => ({ value, count: total }))
-}
-
-function whereOf(search: {
+export function whereOf(search: {
   params: SearchParams
   scope: SearchScope
   exclude?: string

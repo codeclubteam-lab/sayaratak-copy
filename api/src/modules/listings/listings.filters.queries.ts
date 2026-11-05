@@ -81,9 +81,9 @@ export function distanceKm(origin: { lat: number; lng: number }) {
   ))`
 }
 
-/** 1 for a listing with at least one photo or video, else 0 (relevance ranks them first). */
+/** Whether the listing has at least one photo or video (relevance ranks those first). */
 export function hasMedia() {
-  return sql<number>`(exists (select 1 from ${listingMedia} where ${listingMedia.listingId} = ${listings.id}))::int`
+  return sql<boolean>`exists (select 1 from ${listingMedia} where ${listingMedia.listingId} = ${listings.id})`
 }
 
 function attributeWhere(p: SearchParams, on: (key: string) => boolean) {

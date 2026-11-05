@@ -1,0 +1,1 @@
+CREATE INDEX "listings_created" ON "listings" USING btree ("created_at" desc,"id");

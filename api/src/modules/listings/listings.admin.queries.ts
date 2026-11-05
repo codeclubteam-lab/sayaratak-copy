@@ -51,18 +51,19 @@ export async function listForAdmin(ex: Executor, find: AdminFilters) {
     sellerWhere(find),
     textWhere(find)
   )
-  const rows = await ex
-    .select({
-      listing: listings,
-      total: sql<number>`count(*) over ()`.mapWith(Number),
-    })
-    .from(listings)
-    .where(where)
-    .orderBy(desc(listings.createdAt), asc(listings.id))
-    .offset(find.page.offset)
-    .limit(find.page.size)
-  const total = rows[0]?.total ?? (await ex.$count(listings, where))
-  return { rows: rows.map((row) => row.listing), total }
+  // The total is its own query: `count(*) over ()` would carry every wide row of the match
+  // through a window and spill it to disk (176 ms at 50,000 listings, 10.6).
+  const [rows, total] = await Promise.all([
+    ex
+      .select()
+      .from(listings)
+      .where(where)
+      .orderBy(desc(listings.createdAt), asc(listings.id))
+      .offset(find.page.offset)
+      .limit(find.page.size),
+    ex.$count(listings, where),
+  ])
+  return { rows, total }
 }
 
 /** Ids of the listings, in any state, whose title holds `term` (lower case): the text search of the reports queue. */

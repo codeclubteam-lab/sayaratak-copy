@@ -121,6 +121,9 @@ export const listings = pgTable(
       sql`coalesce(${table.bumpedAt}, ${table.createdAt}) desc`
     ),
     index().on(table.expiresAt),
+    // The admin table: every listing newest first (10.6: a seq scan and sort took 176 ms).
+    // Raw `desc`: the builder's `.desc()` writes NULLS LAST, which `order by ... desc` cannot use.
+    index("listings_created").on(sql`${table.createdAt} desc`, table.id),
     // Radius search and the map: a bounding box on the pin (A11).
     index().on(table.lat, table.lng),
     index().using("gin", table.compatibleTypes),
