@@ -1944,6 +1944,15 @@ describe("verification, owner side", () => {
       ["other", file("a.pdf", 10, "application/pdf")],
     ])
     expect(pdf.body.fields.file).toBe("validation.image_type")
+    const textFile = new FormData()
+    textFile.append("label", "other")
+    textFile.append("file", "not a file")
+    const textResult = await call("POST", "/me/verification", {
+      as: "u-dealer",
+      form: textFile,
+    })
+    expect(textResult.status).toBe(422)
+    expect(textResult.body.fields.file).toBe("validation.image_type")
     expect(
       (await send("u-dealer", [["other", png()]], "x".repeat(301))).body.fields
         .note

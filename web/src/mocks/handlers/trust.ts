@@ -51,7 +51,8 @@ route("POST", "/me/verification", async (c) => {
   if (note.length > 300)
     throw fail(422, "validation", { note: "validation.too_long" })
   const images = files.filter(
-    (f): f is File => f instanceof File && f.type.startsWith("image/")
+    (f): f is typeof f & File =>
+      f instanceof File && f.type.startsWith("image/")
   )
   if (images.length !== files.length)
     throw fail(422, "validation", { file: "validation.image_type" })
