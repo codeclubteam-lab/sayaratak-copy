@@ -40,6 +40,57 @@ services:
       # Blank until the two-network check proves which addresses Render's proxy uses (A3, T7).
       - key: TRUSTED_PROXIES
         sync: false
+      # Service keys (A14). Optional while APP_ENV=development (blank = feature off), all required
+      # when APP_ENV=production. sync: false keeps values out of git: fill them in the dashboard.
+      - key: COOKIE_DOMAIN
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: FACEBOOK_CLIENT_ID
+        sync: false
+      - key: FACEBOOK_CLIENT_SECRET
+        sync: false
+      - key: CLOUDINARY_URL
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_SECURE
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: R2_ACCOUNT_ID
+        sync: false
+      - key: R2_ACCESS_KEY_ID
+        sync: false
+      - key: R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: R2_BUCKET
+        sync: false
+      - key: FCM_SERVICE_ACCOUNT
+        sync: false
+      - key: APPLE_CLIENT_ID
+        sync: false
+      - key: APPLE_TEAM_ID
+        sync: false
+      - key: APPLE_KEY_ID
+        sync: false
+      - key: APPLE_PRIVATE_KEY
+        sync: false
+      - key: APPLE_APP_BUNDLE_ID
+        sync: false
+      # Platform admin endpoint (8.12): off while either is blank.
+      - key: ADMIN_SECRET_KEY
+        sync: false
+      - key: ADMIN_RECOVERY_EMAIL
+        sync: false
 
   - type: web
     name: sayaratak-web
