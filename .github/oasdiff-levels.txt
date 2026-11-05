@@ -1,0 +1,15 @@
+response-optional-property-removed err
+response-property-enum-value-removed err
+response-mediatype-enum-value-removed err
+request-body-type-compatible err
+request-body-type-generalized err
+request-property-type-compatible err
+request-property-type-generalized err
+request-parameter-type-generalized err
+request-parameter-property-type-generalized err
+response-body-type-compatible err
+response-body-type-specialized err
+response-property-type-compatible err
+response-property-type-specialized err
+response-header-type-compatible err
+response-header-type-specialized err

@@ -42,6 +42,37 @@ in development; that page returns 404 in production. The JSON contract remains a
 | `bun run job <name>` | Run one background job by hand |
 | `bun run openapi` | Regenerate `openapi.json` (a test fails when it is stale) |
 
+## API compatibility checks
+
+CI checks that `openapi.json` matches the routes, then rejects breaking `/api/v1`
+changes with oasdiff 1.35.0. The binary and its SHA-256 are pinned in
+`.github/workflows/ci.yml`; it is not an application dependency. Pull requests to
+`main` compare against their base commit, pushes to `main` against the previous
+commit, and other branches against `origin/main`. Missing baselines fail the check.
+
+New optional inputs, response fields and routes are allowed. Removing a route,
+response field (even optional), or enum value, changing a type, or requiring a new
+input is not. Put breaking changes in `/api/v2` and keep `/api/v1` available.
+`.github/oasdiff-levels.txt` enforces the stricter response-field and enum rules.
+Deprecation and sunset dates do not permit v1 removals. The checker also rejects
+type widening or narrowing that oasdiff normally considers compatible.
+
+With the pinned oasdiff binary on `PATH`, run from the repo root:
+
+```sh
+base=$(mktemp)
+git show origin/main:api/openapi.json > "$base"
+bun api/scripts/check-api-contract.ts "$base" api/openapi.json
+rm "$base"
+bun api/scripts/contract-smoke.ts
+```
+
+The smoke check uses temporary contracts and proves both passing additions and
+failing removals without changing the real contract or needing a database.
+For freshness, run `bun run test tests/openapi.test.ts` from `api/` with the test
+database running. After an intentional additive schema change, run `bun run openapi`
+and commit the updated contract.
+
 ## Production image
 
 Built from the repo root, because the workspace needs `packages/shared`:
