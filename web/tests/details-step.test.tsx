@@ -173,7 +173,7 @@ describe("DetailsStep", () => {
     expect(
       screen.getAllByText("This field is required").length
     ).toBeGreaterThan(3)
-    expect(document.activeElement).toBe(select(/^Make/))
+    await waitFor(() => expect(document.activeElement).toBe(select(/^Make/)))
     expect(step(shell)).toBe("details")
   })
 

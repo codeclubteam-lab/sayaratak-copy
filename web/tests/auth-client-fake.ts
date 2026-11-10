@@ -54,7 +54,8 @@ export const authClient = {
         email: string
         password: string
       }) => {
-        if (db.users.some((u) => u.email === email)) return fail("exists", 409)
+        if (db.users.some((u) => u.email === email))
+          return fail("USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL", 422)
         const user: UserRow = {
           id: newId("u"),
           role: "user",

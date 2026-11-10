@@ -200,6 +200,29 @@ describe("SettingsPage", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
   })
 
+  it("shows when another account owns the new email under its field, with no code dialog, and saves nothing", async () => {
+    const before = rowOf("user").email
+    const name = rowOf("user").fullName
+    const otherEmail = db.users.find(
+      (u) => u.email && u.id !== rowOf("user").id
+    )!.email!
+    await open()
+    type(await field(/Full name/), "Someone Else")
+    type(await field("Email *"), otherEmail)
+    save()
+    expect(
+      await screen.findByText(
+        "Another account already uses this phone number or email"
+      )
+    ).toBeTruthy()
+    expect(authClient.emailOtp.requestEmailChange).toHaveBeenCalledWith({
+      newEmail: otherEmail,
+    })
+    expect(screen.queryByRole("dialog")).toBeNull()
+    expect(rowOf("user").email).toBe(before)
+    expect(rowOf("user").fullName).toBe(name)
+  })
+
   it("leaves a missing Facebook email empty and saves unrelated profile edits", async () => {
     rowOf("user").email = undefined
     rowOf("user").password = null

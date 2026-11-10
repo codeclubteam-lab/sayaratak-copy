@@ -8,7 +8,12 @@ import { closeAuthGate, useRequireAuth } from "@/features/auth/auth-gate"
 import { requireRole, requireUser } from "@/features/auth/guards"
 import { publicUser } from "@/mocks/lib"
 import { db, resetDb } from "@/mocks/db"
+import { AUTH_TEST_CODE, authClient } from "./auth-client-fake"
 import { renderShell } from "./shell-render"
+
+document.elementFromPoint = () => null
+const type = (label: string | RegExp, value: string) =>
+  fireEvent.change(screen.getByLabelText(label), { target: { value } })
 
 function stubViewport(mobile: boolean) {
   vi.stubGlobal("matchMedia", () => ({
@@ -53,6 +58,70 @@ describe("auth dialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Buyer" }))
     expect(await screen.findByText("runs 1")).toBeTruthy()
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+  })
+
+  it("replays the gated action after email and password login without demo buttons", async () => {
+    vi.stubEnv("VITE_DEMO", "false")
+    await renderShell(<Demo />)
+    fireEvent.click(screen.getByRole("button", { name: "gated" }))
+    expect(screen.queryByText("Demo accounts")).toBeNull()
+    type("Email", "user@demo.sy")
+    type("Password", "Demo1234")
+    fireEvent.click(screen.getByRole("button", { name: "Log in" }))
+    expect(await screen.findByText("runs 1")).toBeTruthy()
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+  })
+
+  it("switches to sign up in the dialog, verifies the email code, then replays the gated action", async () => {
+    await renderShell(<Demo />)
+    fireEvent.click(screen.getByRole("button", { name: "gated" }))
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }))
+    expect(
+      await screen.findByRole("dialog", { name: "Create your account" })
+    ).toBeTruthy()
+    type("Full name", "Gate Signer")
+    type("Email", "gate.signer@example.com")
+    type("Password", "Passw0rd1")
+    type("Confirm password", "Passw0rd1")
+    fireEvent.click(screen.getByRole("checkbox"))
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }))
+    await screen.findByLabelText("Verification code")
+    type("Verification code", AUTH_TEST_CODE)
+    await screen.findByRole("heading", { name: "Email verified" })
+    expect(screen.getByText("runs 0")).toBeTruthy()
+    fireEvent.click(screen.getByRole("button", { name: "Continue" }))
+    expect(await screen.findByText("runs 1")).toBeTruthy()
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+  })
+
+  it("holds a gated admin login on the second-factor step until the code succeeds", async () => {
+    await renderShell(<Demo />)
+    fireEvent.click(screen.getByRole("button", { name: "gated" }))
+    type("Email", "admin@demo.sy")
+    type("Password", "Demo1234")
+    fireEvent.click(screen.getByRole("button", { name: "Log in" }))
+    await screen.findByRole("heading", { name: "Confirm your admin sign-in" })
+    expect(screen.getByText("runs 0")).toBeTruthy()
+    type("Verification code", AUTH_TEST_CODE)
+    expect(await screen.findByText("runs 1")).toBeTruthy()
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+  })
+
+  it("returns social sign-in inside the dialog to the filtered page", async () => {
+    await renderShell(<Demo />, { path: "/en/search?q=toyota&page=2" })
+    fireEvent.click(screen.getByRole("button", { name: "gated" }))
+    fireEvent.click(
+      screen.getByRole("button", { name: "Continue with Google" })
+    )
+    await waitFor(() => expect(authClient.signIn.social).toHaveBeenCalledOnce())
+    const callbackURL = new URL(
+      authClient.signIn.social.mock.lastCall![0].callbackURL
+    )
+    expect(callbackURL.pathname).toBe("/en/auth/callback")
+    expect(callbackURL.searchParams.get("redirect")).toBe(
+      "/en/search?q=toyota&page=2"
+    )
+    expect(screen.getByText("runs 0")).toBeTruthy()
   })
 
   it("closes on Escape without running the action", async () => {

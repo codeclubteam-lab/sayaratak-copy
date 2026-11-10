@@ -1,3 +1,5 @@
+import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { isRedirect } from "@tanstack/react-router"
 import { fireEvent, screen, waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -5,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { AuthDialog } from "@/features/auth/components/auth-dialog"
 import { closeAuthGate } from "@/features/auth/auth-gate"
 import { redirectBanned } from "@/features/auth/guards"
-import { useUpdateNotificationPrefs } from "@/features/auth/queries"
+import { prefsQuery, useUpdateNotificationPrefs } from "@/features/auth/queries"
 import { Header } from "@/components/app/header"
 import { SettingsPage } from "@/features/settings/components/settings-page"
 import { keys } from "@/lib/api/query-keys"
@@ -43,6 +45,8 @@ describe("sign out", () => {
     })
     await signOut()
     await waitFor(() => expect(client.getQueryData(keys.me)).toBeNull())
+    expect(authClient.signOut).toHaveBeenCalledOnce()
+    expect(document.cookie).not.toContain("sy_session=")
     expect(router.state.location.pathname).toBe("/en/vehicles/cars/sale")
   })
   it("goes home from a protected page", async () => {
@@ -66,7 +70,19 @@ function Save() {
   )
 }
 
-describe("401 from a mutation", () => {
+function LoadPrefs() {
+  const [enabled, setEnabled] = useState(false)
+  const prefs = useQuery({ ...prefsQuery, enabled, retry: false })
+  return (
+    <>
+      <button onClick={() => setEnabled(true)}>load prefs</button>
+      <output>{prefs.isSuccess ? "prefs loaded" : "waiting"}</output>
+      <AuthDialog />
+    </>
+  )
+}
+
+describe("401 from a mutation or query", () => {
   it("maps Better-Auth UNAUTHORIZED on an email change into the session-ended gate", async () => {
     authClient.emailOtp.requestEmailChange.mockResolvedValueOnce({
       data: null,
@@ -88,25 +104,52 @@ describe("401 from a mutation", () => {
     ).toBeTruthy()
     expect(client.getQueryData(keys.me)).toBeNull()
   })
-  it("asks to sign in again, then runs the call again", async () => {
+  it("asks to sign in again via Better-Auth, then restores the session and runs the mutation again", async () => {
+    vi.stubEnv("VITE_DEMO", "false")
     const { client } = await renderShell(<Save />, { role: "user" })
-    const user = publicUser(
-      db.users.find((u) => u.role === "user" && u.onboardingDone)!
-    )
     useMockFetch() // the session cookie is gone
     fireEvent.click(screen.getByRole("button", { name: "save" }))
     expect(
       await screen.findByText("Your session ended. Sign in again to continue.")
     ).toBeTruthy()
     expect(client.getQueryData(keys.me)).toBeNull()
-    useMockFetch(user.id) // sign in sets the cookie
-    fireEvent.click(screen.getByRole("button", { name: "Buyer" }))
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "user@demo.sy" },
+    })
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "Demo1234" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Log in" }))
     expect(await screen.findByText("saved")).toBeTruthy()
+    expect(document.cookie).toContain("sy_session=u-omar")
+  })
+  it("asks to sign in again when a personal query returns 401 and refetches after re-auth", async () => {
+    vi.stubEnv("VITE_DEMO", "false")
+    const { client } = await renderShell(<LoadPrefs />, { role: "user" })
+    useMockFetch()
+    fireEvent.click(screen.getByRole("button", { name: "load prefs" }))
+    expect(
+      await screen.findByText("Your session ended. Sign in again to continue.")
+    ).toBeTruthy()
+    expect(client.getQueryData(keys.me)).toBeNull()
+    fireEvent.change(screen.getByLabelText("Email"), {
+      target: { value: "user@demo.sy" },
+    })
+    fireEvent.change(screen.getByLabelText("Password"), {
+      target: { value: "Demo1234" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Log in" }))
+    expect(await screen.findByText("prefs loaded")).toBeTruthy()
   })
   it("does not open for a visitor who was never signed in", async () => {
     await renderShell(<Save />)
     fireEvent.click(screen.getByRole("button", { name: "save" }))
     await waitFor(() => expect(screen.getByText("idle")).toBeTruthy())
+    expect(screen.queryByRole("dialog")).toBeNull()
+
+    await renderShell(<LoadPrefs />)
+    fireEvent.click(screen.getByRole("button", { name: "load prefs" }))
+    await waitFor(() => expect(screen.getByText("waiting")).toBeTruthy())
     expect(screen.queryByRole("dialog")).toBeNull()
   })
 })

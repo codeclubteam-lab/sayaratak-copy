@@ -1,4 +1,10 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react"
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+} from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { authGate, closeAuthGate } from "@/features/auth/auth-gate"
@@ -97,7 +103,13 @@ describe("LoginForm", () => {
     expect(await screen.findByText("Enter a valid email address")).toBeTruthy()
   })
 
-  it("says so on a wrong password and links to sign up and forgot", async () => {
+  it("hides demo shortcuts when VITE_DEMO is off", async () => {
+    vi.stubEnv("VITE_DEMO", "false")
+    await renderShell(<LoginForm onDone={vi.fn()} />)
+    expect(screen.queryByText("Demo accounts")).toBeNull()
+  })
+
+  it("says so on a wrong password, clears password, and links to sign up and forgot", async () => {
     await renderShell(<LoginForm onDone={vi.fn()} redirect="/en/post" />)
     type("Email", "dealer@demo.sy")
     type("Password", "wrong1234")
@@ -105,6 +117,7 @@ describe("LoginForm", () => {
     expect(
       await screen.findByText("The phone, email or password is not correct")
     ).toBeTruthy()
+    expect(screen.getByLabelText<HTMLInputElement>("Password").value).toBe("")
     expect(
       screen.getByRole("link", { name: "Create account" }).getAttribute("href")
     ).toBe("/en/auth/signup?redirect=%2Fen%2Fpost")
@@ -113,6 +126,95 @@ describe("LoginForm", () => {
         .getByRole("link", { name: "Forgot password?" })
         .getAttribute("href")
     ).toBe("/en/auth/forgot")
+  })
+
+  it("shows suspension support link, unverified-email guidance, and rate-limit lockout", async () => {
+    const dealer = db.users.find((u) => u.email === "dealer@demo.sy")!
+    dealer.banned = true
+    await renderShell(<LoginForm onDone={vi.fn()} />)
+    type("Email", "dealer@demo.sy")
+    type("Password", "Demo1234")
+    fireEvent.click(screen.getByRole("button", { name: "Log in" }))
+    expect(await screen.findByText(/This account is suspended\./)).toBeTruthy()
+    expect(
+      screen.getByRole("link", { name: "Contact support" }).getAttribute("href")
+    ).toBe("/en/contact")
+
+    dealer.banned = false
+    dealer.verifiedEmail = false
+    type("Password", "Demo1234")
+    fireEvent.click(screen.getByRole("button", { name: "Log in" }))
+    expect(
+      await screen.findByText(
+        "Verify your email before logging in. Sign up again to get a new code."
+      )
+    ).toBeTruthy()
+
+    authClient.signIn.email.mockResolvedValueOnce({
+      data: null,
+      error: {
+        status: 429,
+        code: "ACCOUNT_TEMPORARILY_LOCKED",
+        retryAfter: 35,
+      },
+    })
+    type("Password", "Demo1234")
+    fireEvent.click(screen.getByRole("button", { name: "Log in" }))
+    expect(
+      await screen.findByText("Too many attempts. Try again in 35 seconds.")
+    ).toBeTruthy()
+    expect(screen.getByLabelText<HTMLInputElement>("Password").disabled).toBe(
+      true
+    )
+    expect(
+      screen.getByRole<HTMLButtonElement>("button", { name: "Log in" }).disabled
+    ).toBe(true)
+  })
+
+  it("retries /me without re-authenticating on LoginForm and clears password on Back", async () => {
+    const onDone = vi.fn()
+    await renderShell(<LoginForm onDone={onDone} />)
+    const realFetch = globalThis.fetch
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) =>
+      String(input).endsWith("/api/v1/me")
+        ? Promise.resolve(
+            Response.json({ code: "server_error" }, { status: 503 })
+          )
+        : realFetch(input, init)
+    )
+    type("Email", "dealer@demo.sy")
+    type("Password", "Demo1234")
+    fireEvent.click(screen.getByRole("button", { name: "Log in" }))
+    await screen.findByText(
+      "Sign-in succeeded, but we could not load your account. Try again without re-entering your code."
+    )
+    expect(authClient.signIn.email).toHaveBeenCalledOnce()
+    expect(onDone).not.toHaveBeenCalled()
+
+    vi.stubGlobal("fetch", realFetch)
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }))
+    await waitFor(() => expect(onDone).toHaveBeenCalledOnce())
+    expect(authClient.signIn.email).toHaveBeenCalledOnce()
+
+    cleanup()
+    await renderShell(<LoginForm onDone={vi.fn()} />)
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) =>
+      String(input).endsWith("/api/v1/me")
+        ? Promise.resolve(
+            Response.json({ code: "server_error" }, { status: 503 })
+          )
+        : realFetch(input, init)
+    )
+    type("Email", "user@demo.sy")
+    type("Password", "Demo1234")
+    fireEvent.click(screen.getByRole("button", { name: "Log in" }))
+    await screen.findByText(
+      "Sign-in succeeded, but we could not load your account. Try again without re-entering your code."
+    )
+    fireEvent.click(screen.getByRole("button", { name: "Back to log in" }))
+    expect(
+      (await screen.findByLabelText<HTMLInputElement>("Password")).value
+    ).toBe("")
   })
 })
 
@@ -222,6 +324,41 @@ describe("SignupFlow", () => {
       )
     ).toBeTruthy()
   })
+
+  it("shows expired code and resends after cooldown ends", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      await renderShell(<SignupFlow onDone={vi.fn()} />)
+      fill()
+      fireEvent.click(screen.getByRole("checkbox"))
+      fireEvent.click(screen.getByRole("button", { name: "Create account" }))
+      await emailedCode()
+      authClient.emailOtp.verifyEmail.mockResolvedValueOnce({
+        data: null,
+        error: { status: 400, code: "OTP_EXPIRED", retryAfter: undefined },
+      })
+      enterCode("111111")
+      expect(
+        await screen.findByText("This code has expired. Send a new code.")
+      ).toBeTruthy()
+      expect(
+        screen.getByRole<HTMLButtonElement>("button", {
+          name: /Send a new code in/,
+        }).disabled
+      ).toBe(true)
+      for (let i = 0; i < 30; i++)
+        await act(() => vi.advanceTimersByTimeAsync(1000))
+      fireEvent.click(screen.getByRole("button", { name: "Send a new code" }))
+      await waitFor(() =>
+        expect(authClient.emailOtp.sendVerificationOtp).toHaveBeenCalledWith({
+          email: "new.person@example.com",
+          type: "email-verification",
+        })
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })
 
 describe("ForgotFlow", () => {
@@ -247,6 +384,27 @@ describe("ForgotFlow", () => {
     expect(
       screen.getByRole("link", { name: "Log in" }).getAttribute("href")
     ).toBe("/en/auth/login")
+  })
+
+  it("handles a wrong reset code, stays generic for unknown emails, and restarts when the reset code expires", async () => {
+    await renderShell(<ForgotFlow />)
+    type("Email", "nobody@example.com")
+    fireEvent.click(screen.getByRole("button", { name: "Send code" }))
+    await emailedCode()
+    enterCode("000000")
+    expect(await screen.findByText("The code is not correct")).toBeTruthy()
+    enterCode(AUTH_TEST_CODE)
+    await screen.findByRole("heading", { name: "Choose a new password" })
+    authClient.emailOtp.resetPassword.mockResolvedValueOnce({
+      data: null,
+      error: { status: 400, code: "OTP_EXPIRED", retryAfter: undefined },
+    })
+    type("New password", "Newpass123")
+    type("Confirm password", "Newpass123")
+    fireEvent.click(screen.getByRole("button", { name: "Save password" }))
+    expect(
+      await screen.findByRole("heading", { name: "Reset your password" })
+    ).toBeTruthy()
   })
 })
 
