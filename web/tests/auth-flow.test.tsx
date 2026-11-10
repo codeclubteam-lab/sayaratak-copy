@@ -193,7 +193,7 @@ describe("SignupFlow", () => {
     const code = await emailedCode()
     const fetch = globalThis.fetch
     vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) =>
-      String(input).endsWith("/api/me")
+      String(input).endsWith("/api/v1/me")
         ? Promise.resolve(
             Response.json({ code: "server_error" }, { status: 503 })
           )

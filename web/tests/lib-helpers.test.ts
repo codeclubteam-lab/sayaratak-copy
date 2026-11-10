@@ -6,6 +6,7 @@ import { ApiError, buildUrl, errorFrom } from "@/lib/api/client"
 import { errorText } from "@/lib/api/error-text"
 import { patchRows } from "@/lib/api/mutation"
 import { setCookie } from "@/lib/cookie"
+import { buildCsp } from "@/lib/csp"
 import {
   formatMonthYear,
   formatShortDate,
@@ -114,8 +115,25 @@ describe("api client", () => {
         fuel: ["diesel", "petrol"],
         city: null,
       })
-    ).toBe("/api/listings?page=2&fuel=diesel&fuel=petrol")
-    expect(buildUrl("/me")).toBe("/api/me")
+    ).toBe("/api/v1/listings?page=2&fuel=diesel&fuel=petrol")
+    expect(buildUrl("/me")).toBe("/api/v1/me")
+    vi.stubEnv("VITE_API_BASE_URL", "https://api.example.sd/")
+    expect(buildUrl("/me")).toBe("https://api.example.sd/api/v1/me")
+    vi.unstubAllEnvs()
+  })
+  it("buildCsp includes Cloudinary and the API origin in img, media and connect sources", () => {
+    const policy = buildCsp("test-nonce", {
+      apiBaseUrl: "https://api.example.sd/v1",
+      imageOrigins: "https://res.cloudinary.com https://cdn.example.sd",
+    })
+    expect(policy).toContain("script-src 'self' 'nonce-test-nonce'")
+    expect(policy).toContain(
+      "img-src 'self' data: blob: https://tile.openstreetmap.org https://res.cloudinary.com https://api.example.sd https://cdn.example.sd;"
+    )
+    expect(policy).toContain(
+      "media-src 'self' blob: https://res.cloudinary.com https://api.example.sd;"
+    )
+    expect(policy).toContain("connect-src 'self' https://api.example.sd;")
   })
   it("errorFrom reads the error body, or calls it a server error", () => {
     const e = errorFrom(422, {

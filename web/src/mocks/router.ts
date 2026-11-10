@@ -50,7 +50,7 @@ export async function handleMock(
   path?: string
 ): Promise<Response> {
   const pathname =
-    path ?? (new URL(req.url).pathname.replace(/^\/api/, "") || "/")
+    path ?? (new URL(req.url).pathname.replace(/^\/api(?:\/v1)?/, "") || "/")
   const url = new URL(req.url)
   const failure = injected(req, pathname)
   await wait(latency(req))

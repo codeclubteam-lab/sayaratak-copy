@@ -107,7 +107,20 @@ services:
     envVars:
       - key: BUN_VERSION
         value: 1.4.2
-      # 11.3 adds API_BASE_URL and VITE_API_BASE_URL; until then the web app answers from its mock.
+      # Set both to the public API origin (e.g. https://api.example.sd).
+      # VITE_API_BASE_URL is read at Vite build time: rebuild/redeploy after changing it.
+      - key: API_BASE_URL
+        sync: false
+      - key: VITE_API_BASE_URL
+        sync: false
+      - key: APP_ORIGIN
+        sync: false
+      - key: IMAGE_ORIGINS
+        value: https://res.cloudinary.com
+      - key: VITE_DEMO
+        value: "false"
+      - key: VITE_FEATURE_OTP
+        value: "false"
 
 databases:
   - name: sayaratak-db

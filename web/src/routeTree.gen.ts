@@ -21,7 +21,6 @@ import { Route as LocaleDealerRouteRouteImport } from './routes/$locale/dealer/r
 import { Route as LocaleMechanicRouteRouteImport } from './routes/$locale/mechanic/route'
 import { Route as LocalePostRouteImport } from './routes/$locale/post'
 import { Route as LocaleWorkshopRouteRouteImport } from './routes/$locale/workshop/route'
-import { Route as ApiSplatRouteImport } from './routes/api/$'
 import { Route as LocalePublicIndexRouteImport } from './routes/$locale/_public/index'
 import { Route as LocalePublicSplatRouteImport } from './routes/$locale/_public/$'
 import { Route as LocalePublicAboutRouteImport } from './routes/$locale/_public/about'
@@ -189,11 +188,6 @@ const LocaleWorkshopRouteRoute = LocaleWorkshopRouteRouteImport.update({
   id: '/workshop',
   path: '/workshop',
   getParentRoute: () => LocaleRouteRoute,
-} as any)
-const ApiSplatRoute = ApiSplatRouteImport.update({
-  id: '/api/$',
-  path: '/api/$',
-  getParentRoute: () => rootRouteImport,
 } as any)
 const LocalePublicIndexRoute = LocalePublicIndexRouteImport.update({
   id: '/',
@@ -777,7 +771,6 @@ export interface FileRoutesByFullPath {
   '/$locale/mechanic': typeof LocaleMechanicRouteRouteWithChildren
   '/$locale/workshop': typeof LocaleWorkshopRouteRouteWithChildren
   '/$locale/post': typeof LocalePostRoute
-  '/api/$': typeof ApiSplatRoute
   '/$locale/$': typeof LocalePublicSplatRoute
   '/$locale/about': typeof LocalePublicAboutRoute
   '/$locale/contact': typeof LocalePublicContactRoute
@@ -893,7 +886,6 @@ export interface FileRoutesByTo {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/$locale/post': typeof LocalePostRoute
-  '/api/$': typeof ApiSplatRoute
   '/$locale/$': typeof LocalePublicSplatRoute
   '/$locale/about': typeof LocalePublicAboutRoute
   '/$locale/contact': typeof LocalePublicContactRoute
@@ -1016,7 +1008,6 @@ export interface FileRoutesById {
   '/$locale/mechanic': typeof LocaleMechanicRouteRouteWithChildren
   '/$locale/workshop': typeof LocaleWorkshopRouteRouteWithChildren
   '/$locale/post': typeof LocalePostRoute
-  '/api/$': typeof ApiSplatRoute
   '/$locale/_public/$': typeof LocalePublicSplatRoute
   '/$locale/_public/about': typeof LocalePublicAboutRoute
   '/$locale/_public/contact': typeof LocalePublicContactRoute
@@ -1140,7 +1131,6 @@ export interface FileRouteTypes {
     | '/$locale/mechanic'
     | '/$locale/workshop'
     | '/$locale/post'
-    | '/api/$'
     | '/$locale/$'
     | '/$locale/about'
     | '/$locale/contact'
@@ -1256,7 +1246,6 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/$locale/post'
-    | '/api/$'
     | '/$locale/$'
     | '/$locale/about'
     | '/$locale/contact'
@@ -1378,7 +1367,6 @@ export interface FileRouteTypes {
     | '/$locale/mechanic'
     | '/$locale/workshop'
     | '/$locale/post'
-    | '/api/$'
     | '/$locale/_public/$'
     | '/$locale/_public/about'
     | '/$locale/_public/contact'
@@ -1494,7 +1482,6 @@ export interface RootRouteChildren {
   LocaleRouteRoute: typeof LocaleRouteRouteWithChildren
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
-  ApiSplatRoute: typeof ApiSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1582,13 +1569,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/$locale/workshop'
       preLoaderRoute: typeof LocaleWorkshopRouteRouteImport
       parentRoute: typeof LocaleRouteRoute
-    }
-    '/api/$': {
-      id: '/api/$'
-      path: '/api/$'
-      fullPath: '/api/$'
-      preLoaderRoute: typeof ApiSplatRouteImport
-      parentRoute: typeof rootRouteImport
     }
     '/$locale/_public/': {
       id: '/$locale/_public/'
@@ -2661,7 +2641,6 @@ const rootRouteChildren: RootRouteChildren = {
   LocaleRouteRoute: LocaleRouteRouteWithChildren,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
-  ApiSplatRoute: ApiSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

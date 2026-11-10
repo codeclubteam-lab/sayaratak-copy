@@ -113,7 +113,10 @@ describe("VerificationPage", () => {
     const mock = globalThis.fetch
     let sent: FormData | undefined
     vi.stubGlobal("fetch", async (input: RequestInfo, init?: RequestInit) => {
-      if (String(input) !== "/api/me/verification" || init?.method !== "POST")
+      if (
+        String(input) !== "/api/v1/me/verification" ||
+        init?.method !== "POST"
+      )
         return mock(input, init)
       sent = init.body as FormData
       const row = request("pending", {

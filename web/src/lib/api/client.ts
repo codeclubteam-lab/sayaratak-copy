@@ -18,9 +18,10 @@ const isServer = typeof window === "undefined"
 
 // Arrays repeat the key (`fuel=petrol&fuel=diesel`), undefined and null are dropped.
 export function buildUrl(path: string, query?: Query) {
-  const base = isServer
-    ? (process.env.API_BASE_URL ?? "http://localhost:3000")
+  const rawBase = isServer
+    ? process.env.API_BASE_URL || "http://localhost:4000"
     : (import.meta.env.VITE_API_BASE_URL ?? "")
+  const base = rawBase.replace(/\/+$/, "")
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(query ?? {})) {
     for (const v of Array.isArray(value) ? value : [value]) {
@@ -29,7 +30,7 @@ export function buildUrl(path: string, query?: Query) {
     }
   }
   const qs = params.toString()
-  return `${base}/api${path}${qs ? `?${qs}` : ""}`
+  return `${base}/api/v1${path}${qs ? `?${qs}` : ""}`
 }
 
 const errorBody = z.object({
@@ -66,7 +67,6 @@ export async function apiFetch<TSchema extends z.ZodType>(
   const headers = new Headers()
   if (o.body !== undefined) headers.set("content-type", "application/json")
   if (isServer) {
-    headers.set("x-mock-ssr", "1")
     const cookie = await getForwardedCookie()
     if (cookie) headers.set("cookie", cookie)
   }

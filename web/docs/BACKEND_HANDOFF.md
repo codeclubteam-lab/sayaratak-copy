@@ -4,14 +4,14 @@ What the real API has to provide so the frontend works unchanged, and what the m
 
 ## Conventions
 
-- Base path `/api`. JSON in and out, except the multipart uploads named below.
+- Base path `/api/v1` (health checks under `/api/health/*`). JSON in and out, except the multipart uploads named below.
 - Every request and response is checked by a Zod schema in `packages/shared/src/schemas`. In the tables, `inputs:loginInputSchema` means the export `loginInputSchema` of `packages/shared/src/schemas/inputs.ts`. The backend imports the same files (the workspace package `@sayaratak/shared`), so the contract cannot drift.
 - `Page<X>` is `{ items: X[], total, page, pageSize }` (`fields:pageOf`). Page lists take `page` and `pageSize`; short lists and rails take `limit` (1 to 24) instead.
 - Array query params repeat the key: `fuel=petrol&fuel=diesel`.
 - Errors: HTTP status plus `{ code, message, fields?, retryAfter? }`. `fields` maps a field name to an i18n key such as `validation.required`. The UI reacts to `code` only.
 - Money is whole SDG, as integers, with no currency field. Dates are ISO strings in UTC; the UI shows them in `Africa/Khartoum`.
 - Bilingual text is `{ ar, en }` (`fields:bilingualSchema`): taxonomy names, business names and descriptions, notification titles and bodies, pages, banners.
-- Session by cookie. "public" marks endpoints that work signed out; every other endpoint answers 401 `unauthenticated` when signed out and 403 `banned` for a banned account.
+- Session by cookie (`sy` prefix, shared parent domain via `COOKIE_DOMAIN` in production; `bearer` supported for mobile apps except admin routes). "public" marks endpoints that work signed out; every other endpoint answers 401 `unauthenticated` when signed out and 403 `banned` for a banned account. Admin routes (`/api/v1/admin/*`) also require `twoFactor` email-code verification and reject bearer auth.
 
 ### Error codes
 
@@ -44,23 +44,23 @@ What the real API has to provide so the frontend works unchanged, and what the m
 
 ### Session and account (`handlers/auth.ts`)
 
-The auth rows are the mock's contract. The backend plan replaces them with Better-Auth's own endpoints (owner decision, 2026-10-27); `SWAP_TO_REAL_API.md` lists what changes in the frontend. The behaviors in "Auth rules" still apply.
+Better-Auth (`/api/v1/auth/*`) replaces the mock `/auth/*` routes below (with `emailOTP`, admin `twoFactor` email code, social redirects for Google, Facebook, and Apple, plus `bearer()` for mobile apps). `GET /api/v1/me` and `POST /api/v1/me/password` (decision O2) remain custom API routes serving the shared schemas.
 
 | Endpoint | Input | Output |
 |---|---|---|
-| `GET /me` (public) | | `user:userSchema` or `null` |
-| `POST /auth/login` | `inputs:loginInputSchema` (email, password) | `user:userSchema` + session cookie |
-| `POST /auth/signup` | `inputs:signupInputSchema` (email, fullName, password) | `api:codeSentSchema`. Creates nothing yet |
-| `POST /auth/signup/verify` | `inputs:codeInputSchema` (email, code) | 201 `user:userSchema` + session cookie |
-| `POST /auth/oauth/:provider` | `inputs:oauthInputSchema`. `google` or `facebook` | `user:userSchema` + session cookie |
-| `POST /auth/otp/send` | `inputs:otpSendInputSchema` | `api:okSchema` |
-| `POST /auth/otp/verify` | `inputs:otpVerifyInputSchema` | `user:userSchema` (signs in when signed out) or `api:okSchema` |
-| `POST /auth/forgot` | `inputs:emailInputSchema` | `api:codeSentSchema`, same answer for unknown emails |
-| `POST /auth/forgot/verify` | `inputs:codeInputSchema` | `api:resetTokenSchema` (one-time token) |
-| `POST /auth/reset` | `inputs:resetInputSchema` (token, password) | `api:okSchema` |
-| `POST /auth/logout` | | `{ ok }`, clears the cookie |
-| `PATCH /me` | `inputs:profilePatchSchema` | `user:userSchema` |
-| `POST /me/password` | `inputs:passwordInputSchema` | `api:okSchema` |
+| `GET /me` (public) | | `user:userSchema` or `null` (omits Facebook placeholder email `fb-<id>@facebook.invalid`) |
+| `POST /auth/login` | `inputs:loginInputSchema` (email, password) | Better-Auth `sign-in/email`: session cookie (or `twoFactorRedirect: true` for admins) |
+| `POST /auth/signup` | `inputs:signupInputSchema` (email, fullName, password) | Better-Auth `sign-up/email`: creates unverified user and sends 6-digit OTP |
+| `POST /auth/signup/verify` | `inputs:codeInputSchema` (email, code) | Better-Auth `email-otp/verify-email` |
+| `POST /auth/oauth/:provider` | Google, Facebook, or Apple | Better-Auth `sign-in/social` redirect back via `/$locale/auth/callback` |
+| `POST /auth/otp/send` | `inputs:otpSendInputSchema` | Future work (phone OTP) |
+| `POST /auth/otp/verify` | `inputs:otpVerifyInputSchema` | Future work (phone OTP) |
+| `POST /auth/forgot` | `inputs:emailInputSchema` | Better-Auth `email-otp/request-password-reset` |
+| `POST /auth/forgot/verify` | `inputs:codeInputSchema` | Better-Auth `email-otp/check-verification-otp` |
+| `POST /auth/reset` | `inputs:resetInputSchema` | Better-Auth `email-otp/reset-password` |
+| `POST /auth/logout` | | Better-Auth `sign-out`, clears the cookie |
+| `PATCH /me` | `inputs:profilePatchSchema` | `user:userSchema` (new email verified via Better-Auth change-email OTP; phone saves unverified without SMS) |
+| `POST /me/password` | `inputs:passwordInputSchema` | `api:okSchema` (changes existing password or sets first password for OAuth accounts) |
 | `DELETE /me` | | `{ ok }`, clears the cookie. Admins get 403 |
 | `GET /me/notification-prefs`, `PATCH` | `inputs:notificationPrefsInputSchema` | `api:notificationPrefsSchema` |
 | `GET /drafts/:key`, `PATCH` | `inputs:draftInputSchema` | `api:draftSchema` |
@@ -83,8 +83,8 @@ The auth rows are the mock's contract. The backend plan replaces them with Bette
 | `GET /me/listings` | `tab`, `type`, `intent`, `sort`, `q`, `needsAttention`, `page`, `pageSize` up to 500 (CSV export) | `Page<listing:listingSchema>` |
 | `GET /listings/:id/analytics` | `range=7d\|30d\|90d` | `api:listingAnalyticsSchema` |
 | `GET /map` (public) | `layers` (repeat: vehicles, dealerships, workshops, mechanics), `bbox=west,south,east,north`, vehicle filters | `responses:mapResponseSchema`, at most 300 items |
-| `POST /uploads` (public) | multipart `file`, and `poster` for a video; optional `width`, `height`, `placeholderColor` | `listing:mediaSchema` |
-| `GET /uploads/:id` (public) | | the file |
+| `POST /uploads` | multipart `file`, and `poster` for a video; optional `width`, `height`, `placeholderColor` | `listing:mediaSchema` (requires a signed-in session; idempotent) |
+| `GET /uploads/:id` (public for listing photos/videos; owner/admin only for private docs/receipts) | optional `?w=` (`320`, `640`, `960`, `1280`) | `302` redirect to Cloudinary for public files, or streamed bytes for private receipts/documents (`404` otherwise) |
 | `POST /events` (public) | `inputs:eventInputSchema` (`view`, `phone_click`, `whatsapp_click`, `share`, `banner_click`, `banner_view`, `targetId`) | `api:okSchema` |
 | `GET /me/analytics` | `range` | `responses:analyticsSchema`, role scoped |
 
@@ -145,6 +145,7 @@ The auth rows are the mock's contract. The backend plan replaces them with Bette
 | `GET /site` (public) | | `responses:siteSchema` (contact details and locales only) |
 | `GET /pages/:slug` (public) | | `admin:sitePageSchema` |
 | `GET /banners` (public) | `placement` | `admin:bannerSchema[]`, only live ones |
+| `GET /sitemap` (public) | | `responses:sitemapEntrySchema[]` |
 | `POST /contact` (public) | `inputs:contactInputSchema` | `api:okSchema` |
 
 ### Admin (`handlers/admin*.ts`). Every endpoint needs role `admin`
@@ -176,7 +177,7 @@ The auth rows are the mock's contract. The backend plan replaces them with Bette
 | `GET /admin/ad-pages`, `PATCH /admin/ad-pages/:id` | `inputs:adPagePatchSchema` (weekly price, slots, for sale) | `ads:adPageSchema` |
 | `GET/PATCH /admin/pages/:slug` | `inputs:pagePatchSchema` | `admin:sitePageSchema` |
 | `GET/PATCH /admin/settings` | `inputs:settingsPatchSchema` | `admin:settingsSchema` |
-| `GET/POST /admin/backups`, `POST /admin/backups/:id/restore` | | `admin:backupSchema` |
+| `GET/POST /admin/backups` | | `admin:backupSchema[]` / `admin:backupSchema` (dumped to private R2 bucket; `POST /admin/backups/:id/restore` returns `403`, restores run via CLI `bun run db:restore <id>`) |
 
 `POST /mock/reset`, `/mock/expire-session` and `/mock/ban-me` are demo tools and have no real counterpart.
 
@@ -268,18 +269,19 @@ One review per author per target (409 `already_reviewed`). The target's owner ma
 - Assign plan replaces the business's active subscription; empty custom fields take the plan's values.
 - Taxonomy: a row in use is 409 `in_use`. The last shown vehicle type and the last enabled country cannot be turned off (409 `last_shown`).
 - Broadcast audience: roles, optional city (individuals by profile city, businesses by business city), verified only (leaves individuals out). Only accounts with announcements on are counted and notified. The api queues the broadcast (`status` queued, 0 recipients) and a job rings the bells in chunks (`sending`, then `sent`; `recipients` counts those reached so far); the mock does the same 1.5 seconds after Send. Only accounts that existed when it was sent are reached.
-- Backups store a full snapshot; restore puts it back and keeps the backup list.
+- Backups dump `pg_dump` archives into a private Cloudflare R2 bucket (`ready` once stored); restores never run through HTTP (`POST /admin/backups/:id/restore` answers `403` and points operators to `bun run db:restore <id>`).
 
 ### Auth rules
 
-- Emailed codes: 6 digits, valid 10 minutes, one use, gone after 5 wrong tries; sending again replaces the code. Sign-up creates the account only after the right code.
-- Forgot password answers the same for unknown emails and sends nothing.
-- Login throttling: 5 failures per email in 10 minutes gives 429 `too_many_attempts` with `retryAfter`. A password reset clears the counter.
-- Changing email or phone needs a code sent to the new value; removing one is refused when it is the last.
+- Emailed codes: 6 digits, hashed in DB, valid 10 minutes, one use, gone after 5 wrong tries; sending again replaces the code. Sign-up creates an unverified credential account and removes unfinished unverified ones on retry or after 24 hours.
+- Admin accounts use Better-Auth's `twoFactor` emailed code step (`trustDevice: false`; no TOTP or backup codes). `/api/v1/admin/*` refuses bearer tokens and admin sessions before second-step verification.
+- Forgot password answers the same for unknown emails and resets password with the code in one step.
+- Login throttling: 5 failures per email and IP in 10 minutes plus 20 per email across IPs in an hour give 429 `too_many_attempts` with `retryAfter`. Success or a password reset clears the counter.
+- Changing email uses a Better-Auth email-change code sent to the new address (`contact_required` protects the last contact method); phone saves unverified until SMS delivery is added. Facebook logins without an email store a non-mailable `fb-<id>@facebook.invalid` placeholder omitted from `GET /me`.
 
 ### Uploads
 
-Images up to 5 MB (the client already resizes them to WebP; receipts and verification documents go up as they are, JPEG, PNG or WebP only), no SVG (it can carry script), video up to 30 MB with a poster up to 1 MB. The backend should read width, height and dominant color from the file instead of trusting the client, and serve `{w}` widths 320, 640, 960 and 1280 (the mock serves the original for every width).
+Images up to 5 MB (receipts and verification documents checked by magic bytes for JPEG, PNG, or WebP), no SVG, video up to 30 MB with a poster up to 1 MB. Media lives on **Cloudinary** with incoming transformations that re-encode and strip EXIF/GPS (2560 px max for images, 1280 px and 2 Mbit/s for videos), plus strict eager transformations for widths `320`, `640`, `960`, and `1280`. Private receipts and verification documents are stored private on Cloudinary and streamed directly by the API at `GET /api/v1/uploads/:id` to their owner or an admin only (`404` otherwise). `POST /api/v1/uploads` requires a signed-in session.
 
 ### Scheduled jobs the mock does not have
 
@@ -289,11 +291,11 @@ The mock computes these at read time or not at all. The backend needs jobs for: 
 
 - **Rate limits.** Throttle login, sign-up, code send and code verify per email and per IP, `POST /auth/forgot`, `POST /contact`, `POST /reports`, `POST /reviews`, `POST /threads` and messages, `POST /uploads`, and `POST /events`. Return 429 with `retryAfter`.
 - **Account enumeration.** Forgot password already answers the same either way. Sign-up returns 409 `exists` for a taken email; keep that only behind rate limits, or switch to "check your email" for both cases. Login must not reveal whether the email exists.
-- **Uploads.** Check type by content, not extension; strip EXIF (phone photos carry GPS); scan for malware; re-encode images; serve from a separate origin with `Content-Disposition` and a strict content type. `POST /uploads` is public in the mock for the post wizard before sign-in: in production require a session or a short-lived upload token, and delete orphaned uploads.
-- **Authorization.** Check ownership on every `:id` route on the server, not only role. Admin endpoints check role `admin` on every call.
-- **Audit log.** Record every admin action (approve, reject, remove, ban, verify, suspend, payment decision, plan change, settings, taxonomy, broadcast, restore) with admin id, target, before and after, reason, time and IP. The admin activity feed can read from it.
-- **Sessions.** httpOnly, `Secure`, `SameSite=Lax` cookies; rotate on sign-in and on password change; sign out other sessions after a password reset. CSRF protection on state-changing requests.
-- **Response headers.** `src/server.ts` sets a per-request CSP nonce, `Content-Security-Policy`, `X-Content-Type-Options: nosniff` and `Referrer-Policy` on the web app. When the API moves to its own origin, add that origin to `connect-src` (it comes from `VITE_API_BASE_URL`) and image hosts to `IMAGE_ORIGINS`, and send `nosniff` from the API too.
-- **Payment receipts** are personal financial data: admins only, never public URLs.
+- **Uploads.** Check type by magic bytes, not extension; strip EXIF/GPS and re-encode images on Cloudinary (`2560` px cap for images, `1280` px / `2` Mbit/s for videos); serve private files through the API with `Cache-Control: private, no-store`, `X-Content-Type-Options: nosniff`, and a sandboxed CSP after owner-or-admin checks. `POST /api/v1/uploads` requires a signed-in session, and a background job deletes orphaned uploads.
+- **Authorization.** Check ownership on every `:id` route on the server, not only role. Admin endpoints check role `admin` and `twoFactor` completion on every call.
+- **Audit log.** Record every admin action (approve, reject, remove, ban, verify, suspend, payment decision, plan change, settings, taxonomy, broadcast) with admin id, target, before and after, reason, time and IP.
+- **Sessions.** Prefix `sy`, httpOnly, `Secure`, `SameSite=Lax`, cross-subdomain `COOKIE_DOMAIN` in production, `cookieCache` disabled; rotate/revoke sessions on password reset and ban. CSRF `Origin` check on state-changing cookie requests.
+- **Response headers.** `src/server.ts` + `src/lib/csp.ts` set a per-request CSP nonce, `Content-Security-Policy`, `X-Content-Type-Options: nosniff` and `Referrer-Policy` on the web app, allowing the API origin (`VITE_API_BASE_URL`) in `connect-src`, `img-src`, and `media-src`, and `https://res.cloudinary.com` plus `IMAGE_ORIGINS` in `img-src` and `media-src`.
+- **Payment receipts & verification documents** are private personal data streamed by the API only to their owner or an admin, never exposed via public URLs.
 - **Location privacy.** Round positions on the server, never in the client.
-- **Browser web push.** Notifications are in-app only today. Web push needs VAPID keys, a subscription endpoint, per-device storage, and the same per-type preference check as in-app notifications.
+- **App push.** Native apps register devices for FCM push (`POST /me/devices`, `DELETE /me/devices/:id`); browser web push remains out of scope.

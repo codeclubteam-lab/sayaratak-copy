@@ -218,7 +218,7 @@ describe("FavoritesPage", () => {
     const view = await open()
     await cardOf(rows()[0]!.listingId)
     vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) =>
-      /\/api\/favorites\?/.test(String(input))
+      /\/api\/v1\/favorites\?/.test(String(input))
         ? Promise.resolve(new Response("{}", { status: 500 }))
         : real(input, init)
     )

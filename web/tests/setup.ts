@@ -3,7 +3,17 @@ import { afterEach, beforeEach, vi } from "vitest"
 import { resetAuthFake } from "./auth-client-fake"
 
 vi.mock("@/lib/auth-client", () => import("./auth-client-fake"))
-beforeEach(resetAuthFake)
+
+const clearApiEnvs = () => {
+  vi.stubEnv("API_BASE_URL", "")
+  vi.stubEnv("VITE_API_BASE_URL", "")
+}
+
+clearApiEnvs()
+beforeEach(() => {
+  clearApiEnvs()
+  resetAuthFake()
+})
 
 afterEach(cleanup)
 

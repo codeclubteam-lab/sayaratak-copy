@@ -218,7 +218,7 @@ describe("CheckoutPage", () => {
     const mock = globalThis.fetch
     let sent: FormData | undefined
     vi.stubGlobal("fetch", async (input: RequestInfo, init?: RequestInit) => {
-      if (String(input) !== "/api/payments") return mock(input, init)
+      if (String(input) !== "/api/v1/payments") return mock(input, init)
       sent = init?.body as FormData
       const row = {
         id: newId("pay"),

@@ -2,11 +2,11 @@
 
 Sayaratak is a marketplace for vehicles and auto services in Sudan: cars, trucks, motorcycles, tuk-tuks, rickshaws, spare parts, rentals, dealerships, workshops and mechanics. The site is in Arabic (the default, right to left) and English. Every price is in Sudanese pounds (SDG) and there is no other currency.
 
-This folder holds the frontend only. There is no backend yet. The app calls a mock API that runs inside the same server process and has the same shape as the planned real API. See `docs/BACKEND_HANDOFF.md` for that API and `docs/SWAP_TO_REAL_API.md` for switching to it.
+This package holds the TanStack Start web application, talking to the Bun + Hono backend under `/api/v1` (see `../api/`). `src/mocks` stays dev/test-only for Vitest (`tests/mock-fetch.ts`), API parity tests, and static scripts. See `docs/BACKEND_HANDOFF.md` for the endpoint contract and `docs/SWAP_TO_REAL_API.md` for the Phase 11 swap guide.
 
 ## Run it
 
-You need [Bun](https://bun.sh) (developed on 1.4). Bun is the only package manager and script runner used here; do not use npm or pnpm.
+You need [Bun](https://bun.sh) (developed on 1.4). Bun is the only package manager and script runner used here; do not use npm or pnpm. Run `../api` alongside `web` so SSR and browser API calls resolve against `http://localhost:4000`.
 
 ```bash
 bun install --frozen-lockfile
@@ -14,7 +14,7 @@ cp .env.example .env
 bun run dev            # http://localhost:3000, redirects to /ar
 ```
 
-For a demo, run the production build as one long-lived process. The mock keeps its data in memory, so a restart puts the seed data back.
+For production preview, build first then run the Node/Bun server entry:
 
 ```bash
 bun run build
@@ -25,14 +25,12 @@ bun run start          # .output/server/index.mjs, port 3000 (set PORT to change
 
 | Variable | Where it is read | Default in `.env.example` | What it does |
 |---|---|---|---|
-| `API_BASE_URL` | server | `http://localhost:3000` | Origin of the API for calls made during server rendering. The client adds `/api` |
-| `VITE_API_BASE_URL` | browser (build time) | empty | Origin of the API for browser calls. Empty means same origin |
+| `API_BASE_URL` | server | `http://localhost:4000` | Origin of the API for calls made during server rendering. `buildUrl` adds `/api/v1` |
+| `VITE_API_BASE_URL` | browser (build time) | `http://localhost:4000` | Origin of the API for browser calls and Better-Auth client. Unset means same origin (`""`) |
 | `APP_ORIGIN` | server | `http://localhost:3000` | Public origin used in canonical and hreflang links, `sitemap.xml` and `robots.txt`. Falls back to the request origin |
-| `VITE_DEMO` | browser and server | `true` | Shows the demo accounts on the sign-in page, the emailed code on screen, the "Reset demo data" button, and turns on the mock auto-reply in messages |
-| `VITE_FEATURE_OTP` | browser | `false` | Shows the phone verification prompt on the account overview. Phone sign-in is future work |
-| `MOCK_LATENCY_MS` | server | `300` | Fixed delay for browser calls to the mock. Empty gives a random 150 to 450 ms. Server-rendering calls always get 0 |
-| `MOCK_EMPTY` | server | `false` | `true` seeds only the taxonomy, plans, settings, pages and the demo accounts, for checking empty states |
-| `MOCK_REPLY_MS` | server | unset | Delay of the mock auto-reply in messages (8 seconds when unset). Tests set it |
+| `IMAGE_ORIGINS` | server | `https://res.cloudinary.com` | Extra origins added to CSP `img-src` (Cloudinary and `VITE_API_BASE_URL` are included automatically) |
+| `VITE_DEMO` | browser | `true` | Shows the folded demo accounts list on the sign-in form (`false` for production builds) |
+| `VITE_FEATURE_OTP` | browser | `false` | Phone OTP UI flag (future work) |
 | `SEO_ORIGIN` | `scripts/check-seo.ts` | unset | Server the SEO check runs against |
 | `PORT` | `bun run start` | `3000` | Port of the production server |
 
@@ -49,9 +47,9 @@ Every account uses the password `Demo1234`. Sign in with the email.
 | Admin | `admin@demo.sy` | Site admin | `/ar/admin` |
 | New account, onboarding not done | `new@demo.sy` | New Visitor | `/ar/onboarding/role` |
 
-With `VITE_DEMO=true` the sign-in page has a folded "Demo accounts" list. Emailed codes are not sent anywhere: the code step shows the code on screen. Phone codes always accept `123456`. The dealership starts verified; the workshop and the mechanic do not, and have no verification request yet.
+With `VITE_DEMO=true` the sign-in page has a folded "Demo accounts" list (seeded in development by `api/scripts/seed.ts`).
 
-In development, `Ctrl+Shift+D` opens a dev panel that signs in as any role, sets the mock latency, makes the next calls fail (500, 404, 422, offline), ends the session or bans the signed-in account.
+In development, `Ctrl+Shift+D` opens a dev panel that signs in as any demo account or sets mock test headers.
 
 ## Scripts
 
@@ -85,15 +83,13 @@ The release gate is `bun run typecheck && bun run lint && bun run build && bun r
 src/
   routes/          file routes, kept thin: parse search params, run a loader, render a feature
     $locale/       every public and dashboard page (ar or en)
-    api/$.ts       catch-all that hands /api/* to the mock
     sitemap[.]xml.ts, robots[.]txt.ts
   features/<name>/ one folder per screen or domain: components/, queries.ts, schemas.ts, hooks.ts
   components/ui/   shadcn components on Base UI (only token and RTL fixes, never restyled per screen)
   components/app/  shared app components (ListingCard, DataTable, RemoveButton, Gallery...)
-  lib/             api client and query keys, i18n, formatting, SEO, slugs, motion helpers
+  lib/             api client, Better-Auth client, CSP builder, query keys, i18n, formatting, SEO, slugs, motion helpers
   hooks/           shared React hooks
-  schemas/         Zod schemas shared by the app and the mock: entities, inputs, responses
-  mocks/           server-only mock API: router, handlers, in-memory db, seed
+  mocks/           dev/test-only mock API for Vitest (`tests/mock-fetch.ts`), parity tests, and static scripts
   messages/        ar/*.json and en/*.json, flat keys
   styles.css       tokens, type roles, motion tokens
 scripts/           checks and tools behind the scripts above
