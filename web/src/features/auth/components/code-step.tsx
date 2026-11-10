@@ -22,7 +22,7 @@ const errorKey = (e: ApiError) =>
       ? "auth.code_expired"
       : "auth.otp_verify_error"
 
-// The emailed 6-digit code, for sign up and password reset. Six digits submit by themselves; a wrong code clears the boxes.
+// Shared by sign-up, reset and the admin second step. Six digits submit automatically.
 export function CodeStep({
   email,
   demoCode,
@@ -33,6 +33,10 @@ export function CodeStep({
   resendFailed,
   onResend,
   onBack,
+  title,
+  helper,
+  backLabel,
+  resendError,
 }: {
   email: string
   demoCode?: string
@@ -43,24 +47,37 @@ export function CodeStep({
   resendFailed: boolean
   onResend: () => void
   onBack: () => void
+  title?: string
+  helper?: string
+  backLabel?: string
+  resendError?: ApiError | null
 }) {
   const { t } = useT()
   const [code, setCode] = useState("")
   const [resendIn, setResendIn] = useCountdown(COOLDOWN)
+  const [lockedFor, setLockedFor] = useCountdown(0)
   useEffect(() => {
     if (error) setCode("")
   }, [error])
-  const message = error
-    ? t(errorKey(error))
-    : resendFailed
-      ? t("auth.otp_send_error")
-      : undefined
+  useEffect(() => {
+    const failure = error ?? resendError
+    if (failure?.code === "too_many_attempts")
+      setLockedFor(failure.retryAfter ?? 60)
+  }, [error, resendError, setLockedFor])
+  const message =
+    lockedFor > 0
+      ? t("auth.too_many_attempts", { seconds: lockedFor })
+      : error
+        ? t(errorKey(error))
+        : resendFailed
+          ? t("auth.otp_send_error")
+          : undefined
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <AuthHeading
-          title={t("auth.code_title")}
-          helper={t("auth.code_helper")}
+          title={title ?? t("auth.code_title")}
+          helper={helper ?? t("auth.code_helper")}
         />
         <p className="flex flex-wrap items-center gap-x-2">
           <bdi dir="ltr" className="text-ui font-medium">
@@ -71,8 +88,9 @@ export function CodeStep({
             variant="link"
             className="px-0"
             onClick={onBack}
+            disabled={verifying}
           >
-            {t("auth.change_email")}
+            {backLabel ?? t("auth.change_email")}
           </Button>
         </p>
       </div>
@@ -88,7 +106,7 @@ export function CodeStep({
               autoFocus
               autoComplete="one-time-code"
               inputMode="numeric"
-              disabled={verifying}
+              disabled={verifying || lockedFor > 0}
               containerClassName="w-full"
             >
               <InputOTPGroup className="w-full gap-2">
@@ -113,7 +131,7 @@ export function CodeStep({
         type="button"
         variant="outline"
         size="lg"
-        disabled={resendIn > 0 || resending}
+        disabled={resendIn > 0 || resending || verifying || lockedFor > 0}
         onClick={() => {
           onResend()
           setResendIn(COOLDOWN)

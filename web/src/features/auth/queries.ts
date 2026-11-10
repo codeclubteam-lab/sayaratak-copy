@@ -9,30 +9,37 @@ import { apiFetch } from "@/lib/api/client"
 import { useApiMutation } from "@/lib/api/mutation"
 import { keys, publicKeyRoots } from "@/lib/api/query-keys"
 import { markSignIn } from "@/lib/sign-in-flag"
+import { authClient } from "@/lib/auth-client"
+import { authCall } from "@/lib/api/auth-error"
 import {
-  codeSentSchema,
   draftSchema,
   notificationPrefsSchema,
   okSchema,
-  resetTokenSchema,
   type NotificationPrefs,
 } from "@sayaratak/shared/schemas/api"
 import type { z } from "zod"
 import type {
-  codeInputSchema,
-  emailInputSchema,
-  loginInputSchema,
   oauthInputSchema,
-  otpSendInputSchema,
-  otpVerifyInputSchema,
   passwordInputSchema,
   profilePatchSchema,
-  resetInputSchema,
-  signupInputSchema,
 } from "@sayaratak/shared/schemas/inputs"
 import { userSchema, type User } from "@sayaratak/shared/schemas/user"
 
 export { meQuery } from "./me-query"
+export {
+  useLogin,
+  useSignup,
+  useResendSignup,
+  useVerifySignup,
+  useSocialLogin,
+  useSendOtp,
+  useVerifyOtp,
+  useForgotPassword,
+  useVerifyReset,
+  useResetPassword,
+  useSendAdminCode,
+  useVerifyAdminCode,
+} from "./auth-queries"
 export const prefsQuery = queryOptions({
   queryKey: keys.prefs,
   queryFn: ({ signal }) =>
@@ -66,23 +73,7 @@ const post =
   (body?: unknown) =>
     apiFetch(path, { method: "POST", body, schema })
 
-export function useLogin() {
-  const signedIn = useSignedIn()
-  return useApiMutation((body: z.input<typeof loginInputSchema>) =>
-    post("/auth/login", userSchema)(body).then(signedIn)
-  )
-}
-// Sends (or sends again) the sign-up code; the account exists only after useVerifySignup.
-export const useSignup = () =>
-  useApiMutation((body: z.input<typeof signupInputSchema>) =>
-    post("/auth/signup", codeSentSchema)(body)
-  )
-export function useVerifySignup() {
-  const signedIn = useSignedIn(false)
-  return useApiMutation((body: z.input<typeof codeInputSchema>) =>
-    post("/auth/signup/verify", userSchema)(body).then(signedIn)
-  )
-}
+// Unmounted mock dialog only, removed in 11.2. Live social buttons use useSocialLogin.
 export function useOauthLogin() {
   const signedIn = useSignedIn()
   return useApiMutation(
@@ -95,42 +86,11 @@ export function useOauthLogin() {
       )({ accountId: v.accountId }).then(signedIn)
   )
 }
-export const useSendOtp = () =>
-  useApiMutation((body: z.input<typeof otpSendInputSchema>) =>
-    post("/auth/otp/send", okSchema)(body)
-  )
-export function useVerifyOtp() {
-  const qc = useQueryClient()
-  return useApiMutation((body: z.input<typeof otpVerifyInputSchema>) =>
-    post(
-      "/auth/otp/verify",
-      userSchema.or(okSchema)
-    )(body).then((r) => {
-      // Signed out, the code signs in; signed in, it only verifies a contact.
-      if ("id" in r) {
-        if (!qc.getQueryData(keys.me)) markSignIn()
-        qc.setQueryData(keys.me, r)
-      }
-      return r
-    })
-  )
-}
-export const useForgotPassword = () =>
-  useApiMutation((body: z.input<typeof emailInputSchema>) =>
-    post("/auth/forgot", codeSentSchema)(body)
-  )
-export const useVerifyReset = () =>
-  useApiMutation((body: z.input<typeof codeInputSchema>) =>
-    post("/auth/forgot/verify", resetTokenSchema)(body)
-  )
-export const useResetPassword = () =>
-  useApiMutation((body: z.input<typeof resetInputSchema>) =>
-    post("/auth/reset", okSchema)(body)
-  )
 
 function useSignedOut() {
   const qc = useQueryClient()
-  return () => {
+  return async () => {
+    await qc.cancelQueries({ queryKey: keys.me })
     qc.setQueryData(keys.me, null)
     qc.removeQueries({
       predicate: (q) =>
@@ -140,7 +100,7 @@ function useSignedOut() {
 }
 export function useLogout() {
   const signedOut = useSignedOut()
-  return useApiMutation(() => post("/auth/logout", okSchema)().then(signedOut))
+  return useApiMutation(() => authCall(authClient.signOut()).then(signedOut))
 }
 export function useDeleteAccount() {
   const signedOut = useSignedOut()

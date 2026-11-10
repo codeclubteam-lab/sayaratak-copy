@@ -67,6 +67,7 @@ import { Route as LocaleAdminUsersRouteImport } from './routes/$locale/admin/use
 import { Route as LocaleAdminVerificationsRouteImport } from './routes/$locale/admin/verifications'
 import { Route as LocaleAdminWorkshopsRouteImport } from './routes/$locale/admin/workshops'
 import { Route as LocaleAuthIndexRouteImport } from './routes/$locale/auth/index'
+import { Route as LocaleAuthCallbackRouteImport } from './routes/$locale/auth/callback'
 import { Route as LocaleAuthForgotRouteImport } from './routes/$locale/auth/forgot'
 import { Route as LocaleAuthLoginRouteImport } from './routes/$locale/auth/login'
 import { Route as LocaleAuthSignupRouteImport } from './routes/$locale/auth/signup'
@@ -421,6 +422,11 @@ const LocaleAdminWorkshopsRoute = LocaleAdminWorkshopsRouteImport.update({
 const LocaleAuthIndexRoute = LocaleAuthIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => LocaleAuthRouteRoute,
+} as any)
+const LocaleAuthCallbackRoute = LocaleAuthCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
   getParentRoute: () => LocaleAuthRouteRoute,
 } as any)
 const LocaleAuthForgotRoute = LocaleAuthForgotRouteImport.update({
@@ -813,6 +819,7 @@ export interface FileRoutesByFullPath {
   '/$locale/admin/users': typeof LocaleAdminUsersRoute
   '/$locale/admin/verifications': typeof LocaleAdminVerificationsRoute
   '/$locale/admin/workshops': typeof LocaleAdminWorkshopsRoute
+  '/$locale/auth/callback': typeof LocaleAuthCallbackRoute
   '/$locale/auth/forgot': typeof LocaleAuthForgotRoute
   '/$locale/auth/login': typeof LocaleAuthLoginRoute
   '/$locale/auth/signup': typeof LocaleAuthSignupRoute
@@ -928,6 +935,7 @@ export interface FileRoutesByTo {
   '/$locale/admin/users': typeof LocaleAdminUsersRoute
   '/$locale/admin/verifications': typeof LocaleAdminVerificationsRoute
   '/$locale/admin/workshops': typeof LocaleAdminWorkshopsRoute
+  '/$locale/auth/callback': typeof LocaleAuthCallbackRoute
   '/$locale/auth/forgot': typeof LocaleAuthForgotRoute
   '/$locale/auth/login': typeof LocaleAuthLoginRoute
   '/$locale/auth/signup': typeof LocaleAuthSignupRoute
@@ -1050,6 +1058,7 @@ export interface FileRoutesById {
   '/$locale/admin/users': typeof LocaleAdminUsersRoute
   '/$locale/admin/verifications': typeof LocaleAdminVerificationsRoute
   '/$locale/admin/workshops': typeof LocaleAdminWorkshopsRoute
+  '/$locale/auth/callback': typeof LocaleAuthCallbackRoute
   '/$locale/auth/forgot': typeof LocaleAuthForgotRoute
   '/$locale/auth/login': typeof LocaleAuthLoginRoute
   '/$locale/auth/signup': typeof LocaleAuthSignupRoute
@@ -1173,6 +1182,7 @@ export interface FileRouteTypes {
     | '/$locale/admin/users'
     | '/$locale/admin/verifications'
     | '/$locale/admin/workshops'
+    | '/$locale/auth/callback'
     | '/$locale/auth/forgot'
     | '/$locale/auth/login'
     | '/$locale/auth/signup'
@@ -1288,6 +1298,7 @@ export interface FileRouteTypes {
     | '/$locale/admin/users'
     | '/$locale/admin/verifications'
     | '/$locale/admin/workshops'
+    | '/$locale/auth/callback'
     | '/$locale/auth/forgot'
     | '/$locale/auth/login'
     | '/$locale/auth/signup'
@@ -1409,6 +1420,7 @@ export interface FileRouteTypes {
     | '/$locale/admin/users'
     | '/$locale/admin/verifications'
     | '/$locale/admin/workshops'
+    | '/$locale/auth/callback'
     | '/$locale/auth/forgot'
     | '/$locale/auth/login'
     | '/$locale/auth/signup'
@@ -1891,6 +1903,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/$locale/auth/'
       preLoaderRoute: typeof LocaleAuthIndexRouteImport
+      parentRoute: typeof LocaleAuthRouteRoute
+    }
+    '/$locale/auth/callback': {
+      id: '/$locale/auth/callback'
+      path: '/callback'
+      fullPath: '/$locale/auth/callback'
+      preLoaderRoute: typeof LocaleAuthCallbackRouteImport
       parentRoute: typeof LocaleAuthRouteRoute
     }
     '/$locale/auth/forgot': {
@@ -2467,6 +2486,7 @@ const LocaleAdminRouteRouteWithChildren =
   LocaleAdminRouteRoute._addFileChildren(LocaleAdminRouteRouteChildren)
 
 interface LocaleAuthRouteRouteChildren {
+  LocaleAuthCallbackRoute: typeof LocaleAuthCallbackRoute
   LocaleAuthForgotRoute: typeof LocaleAuthForgotRoute
   LocaleAuthLoginRoute: typeof LocaleAuthLoginRoute
   LocaleAuthSignupRoute: typeof LocaleAuthSignupRoute
@@ -2474,6 +2494,7 @@ interface LocaleAuthRouteRouteChildren {
 }
 
 const LocaleAuthRouteRouteChildren: LocaleAuthRouteRouteChildren = {
+  LocaleAuthCallbackRoute: LocaleAuthCallbackRoute,
   LocaleAuthForgotRoute: LocaleAuthForgotRoute,
   LocaleAuthLoginRoute: LocaleAuthLoginRoute,
   LocaleAuthSignupRoute: LocaleAuthSignupRoute,

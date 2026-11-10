@@ -43,6 +43,40 @@ beforeEach(() => {
 })
 
 describe("useRequireAuth", () => {
+  it("authenticates every account switch through one mounted login hook", async () => {
+    useMockFetch()
+    const { qc, wrapper } = setup()
+    const { result } = renderHook(() => useLogin(), { wrapper })
+    await act(() =>
+      result.current.mutateAsync({
+        email: "dealer@demo.sy",
+        password: "Demo1234",
+      })
+    )
+    expect(qc.getQueryData(meQuery.queryKey)).toMatchObject({
+      role: "dealership",
+    })
+    await act(() =>
+      result.current.mutateAsync({
+        email: "workshop@demo.sy",
+        password: "Demo1234",
+      })
+    )
+    expect(qc.getQueryData(meQuery.queryKey)).toMatchObject({
+      role: "workshop",
+    })
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({
+          email: "mechanic@demo.sy",
+          password: "wrong-password",
+        })
+      ).rejects.toMatchObject({ code: "invalid_credentials" })
+    })
+    expect(qc.getQueryData(meQuery.queryKey)).toMatchObject({
+      role: "workshop",
+    })
+  })
   it("opens the gate when signed out and replays the action after sign in", async () => {
     useMockFetch()
     const { qc, wrapper } = setup()

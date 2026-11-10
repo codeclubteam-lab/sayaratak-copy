@@ -1,4 +1,4 @@
-import { useContext, useRef } from "react"
+import { useContext, useRef, useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 
 import { FormField } from "@/components/app/form-field"
@@ -17,6 +17,8 @@ import { AuthSwitch, type AuthSwitchTarget } from "./auth-switch"
 import { DemoAccounts } from "./demo-accounts"
 import { SocialSignIn } from "./social-sign-in"
 import { useAppForm } from "@/hooks/use-app-form"
+import { AdminCodeStep } from "./admin-code-step"
+import { SessionStep } from "./session-step"
 
 const linkClass =
   "inline-flex min-h-11 items-center text-ui font-medium text-primary md:min-h-10"
@@ -36,6 +38,7 @@ export function LoginForm({
   const { t } = useT()
   const mode = useContext(AuthMode)
   const login = useLogin()
+  const [adminEmail, setAdminEmail] = useState<string>()
   const [lockedFor, setLockedFor] = useCountdown(0)
   const root = useRef<HTMLFormElement>(null)
   useEnterKeyHints(root, "done")
@@ -48,7 +51,10 @@ export function LoginForm({
   const locked = lockedFor > 0
   const submit = form.handleSubmit((values) =>
     login.mutate(values, {
-      onSuccess: onDone,
+      onSuccess: (result) => {
+        if ("twoFactorRedirect" in result) setAdminEmail(values.email)
+        else onDone()
+      },
       onError: (e) => {
         if (e.code === "invalid_credentials") {
           form.resetField("password")
@@ -64,9 +70,35 @@ export function LoginForm({
       ? t("auth.invalid_credentials")
       : code === "banned"
         ? t("auth.account_suspended")
-        : code && code !== "too_many_attempts"
-          ? t("auth.login_error")
-          : undefined
+        : code === "email_not_verified"
+          ? t("auth.email_not_verified")
+          : code && code !== "too_many_attempts"
+            ? t("auth.login_error")
+            : undefined
+  if (login.authenticated)
+    return (
+      <SessionStep
+        pending={login.session.isPending}
+        error={login.session.isError}
+        onRetry={() => login.session.mutate(undefined, { onSuccess: onDone })}
+        onBack={() => {
+          login.reset()
+          form.resetField("password")
+        }}
+      />
+    )
+  if (adminEmail)
+    return (
+      <AdminCodeStep
+        email={adminEmail}
+        onDone={onDone}
+        onBack={() => {
+          setAdminEmail(undefined)
+          login.reset()
+          form.resetField("password")
+        }}
+      />
+    )
   return (
     <div className="flex flex-col gap-6">
       <AuthHeading
@@ -132,14 +164,14 @@ export function LoginForm({
           {t("auth.login_submit")}
         </SubmitButton>
       </form>
-      <SocialSignIn onDone={onDone} />
+      <SocialSignIn redirect={target.redirect} />
       <AuthSwitch
         {...target}
         text={t("auth.no_account")}
         label={t("auth.create_account")}
         path="/auth/signup"
       />
-      <DemoAccounts onDone={onDone} />
+      <DemoAccounts onDone={onDone} onAdminChallenge={setAdminEmail} />
     </div>
   )
 }

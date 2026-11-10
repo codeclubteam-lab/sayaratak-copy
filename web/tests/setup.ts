@@ -1,5 +1,9 @@
 import { cleanup, configure } from "@testing-library/react"
-import { afterEach } from "vitest"
+import { afterEach, beforeEach, vi } from "vitest"
+import { resetAuthFake } from "./auth-client-fake"
+
+vi.mock("@/lib/auth-client", () => import("./auth-client-fake"))
+beforeEach(resetAuthFake)
 
 afterEach(cleanup)
 

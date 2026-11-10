@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DevPanelHost } from "@/components/app/dev-panel-host"
+import { authGate, closeAuthGate } from "@/features/auth/auth-gate"
 import {
   getFailMode,
   getLatency,
@@ -31,6 +32,7 @@ const open = () => {
 
 beforeEach(() => {
   resetDb()
+  closeAuthGate()
   invalidate.mockClear()
   setFailMode("none")
   setLatency(null)
@@ -68,7 +70,12 @@ describe("dev panel", () => {
   })
   it("switches the signed-in account", async () => {
     open()
-    await pick(await screen.findByLabelText(/Signed in as/), "Admin")
+    await pick(await screen.findByLabelText(/Signed in as/), "Dealership")
     await waitFor(() => expect(invalidate).toHaveBeenCalled())
+  })
+  it("opens the full login flow for admin instead of skipping its email code", async () => {
+    open()
+    await pick(await screen.findByLabelText(/Signed in as/), "Admin")
+    await waitFor(() => expect(authGate.state.open).toBe(true))
   })
 })

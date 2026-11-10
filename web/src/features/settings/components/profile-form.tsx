@@ -13,12 +13,13 @@ import { useSendOtp, useUpdateProfile } from "@/features/auth/queries"
 import { mediaFromUrl } from "@/features/onboarding/media"
 import { useT } from "@/lib/i18n/use-t"
 import type { User } from "@sayaratak/shared/schemas/user"
-import { profileFormSchema, type ProfileForm } from "../schemas"
+import {
+  profileFormSchema,
+  profileWithoutEmailFormSchema,
+  type ProfileForm,
+} from "../schemas"
 import { VerifyContactDialog } from "./verify-contact-dialog"
 import { useAppForm } from "@/hooks/use-app-form"
-
-type Contact = "email" | "phone"
-const contacts: Contact[] = ["email", "phone"]
 
 const valuesOf = (me: User): ProfileForm => ({
   fullName: me.fullName,
@@ -28,15 +29,17 @@ const valuesOf = (me: User): ProfileForm => ({
   avatarUrl: me.avatarUrl ?? "",
 })
 
-// Name, city and photo save at once. A new phone or email gets its code first: one another account owns, or a failed send, shows under its field and nothing is saved; otherwise a dialog asks for each code. A cleared phone is removed; the email cannot be cleared.
+// Only a new email needs a code. Phones save without SMS and remain unverified.
 export function ProfileForm({ me }: { me: User }) {
   const { t } = useT()
   const update = useUpdateProfile()
   const send = useSendOtp()
   const [saved, setSaved] = useState(false)
-  const [waiting, setWaiting] = useState<Contact[]>([])
+  const [waiting, setWaiting] = useState(false)
   const form = useAppForm<ProfileForm>({
-    resolver: zodResolver(profileFormSchema),
+    resolver: zodResolver(
+      me.email ? profileFormSchema : profileWithoutEmailFormSchema
+    ),
     mode: "onTouched",
     defaultValues: valuesOf(me),
   })
@@ -46,9 +49,9 @@ export function ProfileForm({ me }: { me: User }) {
   }
   const submit = form.handleSubmit(async (values) => {
     setSaved(false)
-    const added = contacts.filter((k) => values[k] && values[k] !== me[k])
-    for (const k of added) {
-      const error = await send.mutateAsync({ identifier: values[k] }).then(
+    const emailChanged = values.email && values.email !== me.email
+    if (emailChanged) {
+      const error = await send.mutateAsync({ identifier: values.email }).then(
         () => undefined,
         (e: { code?: string }) => e
       )
@@ -57,23 +60,29 @@ export function ProfileForm({ me }: { me: User }) {
           error.code === "exists"
             ? "settings.contact_taken"
             : "auth.otp_send_error"
-        return form.setError(k, { message }, { shouldFocus: true })
+        return form.setError("email", { message }, { shouldFocus: true })
       }
     }
-    const removed = contacts.filter((k) => !values[k] && me[k])
     update.mutate(
       {
         fullName: values.fullName,
         cityId: values.cityId,
         avatarUrl: values.avatarUrl,
-        ...Object.fromEntries(removed.map((k) => [k, ""])),
+        phone: values.phone,
       },
       {
-        onSuccess: (user) => (added.length ? setWaiting(added) : done(user)),
+        onSuccess: (user) => (emailChanged ? setWaiting(true) : done(user)),
+        onError: (error) => {
+          if (error.code === "exists")
+            form.setError(
+              "phone",
+              { message: "settings.contact_taken" },
+              { shouldFocus: true }
+            )
+        },
       }
     )
   })
-  const next = waiting[0]
   return (
     <>
       <FieldMarks value="required">
@@ -111,6 +120,7 @@ export function ProfileForm({ me }: { me: User }) {
             </FieldLegend>
             <FieldDescription>{t("settings.contact_hint")}</FieldDescription>
             <FormField
+              optional={!me.email}
               label={t("settings.email_label")}
               error={form.formState.errors.email?.message}
             >
@@ -168,16 +178,15 @@ export function ProfileForm({ me }: { me: User }) {
           </SubmitButton>
         </form>
       </FieldMarks>
-      {next && (
+      {waiting && (
         <VerifyContactDialog
-          key={next}
-          field={next}
-          value={form.getValues(next)}
+          field="email"
+          value={form.getValues("email")}
           sent
-          onCancel={() => setWaiting([])}
+          onCancel={() => setWaiting(false)}
           onVerified={(user) => {
-            setWaiting(waiting.slice(1))
-            if (waiting.length === 1) done(user)
+            setWaiting(false)
+            done(user)
           }}
         />
       )}

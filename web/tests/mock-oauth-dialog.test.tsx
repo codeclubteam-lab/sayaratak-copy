@@ -1,7 +1,12 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react"
+import { useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { LoginForm } from "@/features/auth/components/login-form"
+import { MockOAuthDialog } from "@/features/auth/components/mock-oauth-dialog"
+import {
+  SocialButtons,
+  type Provider,
+} from "@/features/auth/components/social-buttons"
 import { db, resetDb } from "@/mocks/db"
 import { renderShell } from "./shell-render"
 
@@ -15,9 +20,23 @@ beforeEach(() => {
   vi.stubGlobal("innerWidth", 1280)
 })
 
+// Retained component only, pending deletion in 11.2. Live buttons redirect now.
+function Picker({ onDone }: { onDone: () => void }) {
+  const [provider, setProvider] = useState<Provider | null>(null)
+  return (
+    <>
+      <SocialButtons onSelect={setProvider} />
+      <MockOAuthDialog
+        provider={provider}
+        onClose={() => setProvider(null)}
+        onDone={onDone}
+      />
+    </>
+  )
+}
 const setup = async () => {
   const onDone = vi.fn()
-  await renderShell(<LoginForm onDone={onDone} />)
+  await renderShell(<Picker onDone={onDone} />)
   return onDone
 }
 

@@ -7,11 +7,13 @@ import { closeAuthGate } from "@/features/auth/auth-gate"
 import { redirectBanned } from "@/features/auth/guards"
 import { useUpdateNotificationPrefs } from "@/features/auth/queries"
 import { Header } from "@/components/app/header"
+import { SettingsPage } from "@/features/settings/components/settings-page"
 import { keys } from "@/lib/api/query-keys"
 import { db, resetDb } from "@/mocks/db"
 import { publicUser } from "@/mocks/lib"
 import { useMockFetch } from "./mock-fetch"
 import { renderShell } from "./shell-render"
+import { authClient } from "./auth-client-fake"
 
 beforeEach(() => {
   resetDb()
@@ -65,6 +67,27 @@ function Save() {
 }
 
 describe("401 from a mutation", () => {
+  it("maps Better-Auth UNAUTHORIZED on an email change into the session-ended gate", async () => {
+    authClient.emailOtp.requestEmailChange.mockResolvedValueOnce({
+      data: null,
+      error: { status: 401, code: "UNAUTHORIZED", retryAfter: undefined },
+    })
+    const { client } = await renderShell(
+      <>
+        <SettingsPage role="user" />
+        <AuthDialog />
+      </>,
+      { role: "user" }
+    )
+    fireEvent.change(await screen.findByLabelText("Email *"), {
+      target: { value: "changed@example.com" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Save" }))
+    expect(
+      await screen.findByText("Your session ended. Sign in again to continue.")
+    ).toBeTruthy()
+    expect(client.getQueryData(keys.me)).toBeNull()
+  })
   it("asks to sign in again, then runs the call again", async () => {
     const { client } = await renderShell(<Save />, { role: "user" })
     const user = publicUser(

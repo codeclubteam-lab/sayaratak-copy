@@ -13,13 +13,15 @@ import { newPasswordFormSchema, type NewPasswordForm } from "../schemas"
 import { AuthHeading } from "./auth-heading"
 import { useAppForm } from "@/hooks/use-app-form"
 
-// The last step of a reset: the token came from a verified code.
+// The checked code stays in this flow's memory and is consumed with the new password.
 export function NewPasswordForm({
-  token,
+  email,
+  code,
   onDone,
   onExpired,
 }: {
-  token: string
+  email: string
+  code: string
   onDone: () => void
   onExpired: () => void
 }) {
@@ -48,10 +50,11 @@ export function NewPasswordForm({
         className="flex flex-col gap-4"
         onSubmit={form.handleSubmit(({ password }) =>
           reset.mutate(
-            { token, password },
+            { email, code, password },
             {
               onSuccess: onDone,
-              onError: (e) => e.code === "invalid_token" && onExpired(),
+              onError: (e) =>
+                ["code_expired", "otp_invalid"].includes(e.code) && onExpired(),
             }
           )
         )}
@@ -100,11 +103,12 @@ export function NewPasswordForm({
             />
           )}
         </FormField>
-        {reset.isError && reset.error.code !== "invalid_token" && (
-          <p role="alert" className="text-ui text-destructive">
-            {t("auth.reset_error")}
-          </p>
-        )}
+        {reset.isError &&
+          !["code_expired", "otp_invalid"].includes(reset.error.code) && (
+            <p role="alert" className="text-ui text-destructive">
+              {t("auth.reset_error")}
+            </p>
+          )}
         <SubmitButton size="lg" pending={reset.isPending}>
           {t("auth.reset_submit")}
         </SubmitButton>

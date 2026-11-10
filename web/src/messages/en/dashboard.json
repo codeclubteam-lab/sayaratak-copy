@@ -219,7 +219,7 @@
   "settings.profile_title": "Profile",
   "settings.profile_body": "Your name, photo and contact details.",
   "settings.contact_legend": "Contact details",
-  "settings.contact_hint": "Your email signs you in. A phone number is optional. A new one is confirmed with a code.",
+  "settings.contact_hint": "A new email needs a verification code. Phone numbers are optional and save without verification.",
   "settings.email_label": "Email",
   "settings.contact_taken": "Another account already uses this phone number or email",
   "settings.save_error": "Could not save. Check your connection and try again.",

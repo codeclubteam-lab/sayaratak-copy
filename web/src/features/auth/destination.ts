@@ -7,6 +7,7 @@ import type { User } from "@sayaratak/shared/schemas/user"
 // The `redirect` search param of /auth and the onboarding pages: a path on this site, else nothing.
 export const redirectSearch = z.object({
   redirect: z.string().optional().transform(safeRedirect).catch(undefined),
+  error: z.string().optional().catch(undefined),
 })
 
 export const withRedirect = (path: string, redirect?: string) =>

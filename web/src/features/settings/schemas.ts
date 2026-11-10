@@ -17,6 +17,10 @@ export const profileFormSchema = z.object({
   avatarUrl: z.string(),
 })
 export type ProfileForm = z.infer<typeof profileFormSchema>
+// Facebook may supply no email. Do not make unrelated profile edits require one.
+export const profileWithoutEmailFormSchema = profileFormSchema.extend({
+  email: profileFormSchema.shape.email.or(z.literal("")),
+})
 
 export const passwordFormSchema = z
   .object({

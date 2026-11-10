@@ -4,6 +4,7 @@ import { Outlet } from "@tanstack/react-router"
 import { useT } from "@/lib/i18n/use-t"
 import { SidebarProvider } from "@/components/ui/sidebar"
 import { meQuery } from "@/features/auth/me-query"
+import { RecoveryEmailNotice } from "@/features/auth/components/recovery-email-notice"
 import { PlanReminderDialog } from "@/features/billing/components/plan-reminder-dialog"
 import { DashboardSidebar } from "./dashboard-sidebar"
 import { DashboardTopbar } from "./dashboard-topbar"
@@ -38,6 +39,7 @@ export function DashboardLayout() {
             className="mx-auto w-full max-w-[1440px] flex-1 p-4 outline-none md:p-6 xl:p-8"
           >
             {me.role !== "user" && me.role !== "admin" && <SuspendedNotice />}
+            <RecoveryEmailNotice key={me.id} me={me} />
             <Outlet />
           </main>
         </div>

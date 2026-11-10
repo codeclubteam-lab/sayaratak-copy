@@ -2,7 +2,7 @@ import { useContext, useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { useT } from "@/lib/i18n/use-t"
-import { useSignup, useVerifySignup } from "../queries"
+import { useSignup, useResendSignup, useVerifySignup } from "../queries"
 import type { SignupForm as Values } from "../schemas"
 import { AuthHeading, AuthMode } from "./auth-heading"
 import { AuthSwitch, type AuthSwitchTarget } from "./auth-switch"
@@ -10,6 +10,7 @@ import { CodeStep } from "./code-step"
 import { SignupForm } from "./signup-form"
 import { SocialSignIn } from "./social-sign-in"
 import { SuccessStep } from "./success-step"
+import { SessionStep } from "./session-step"
 
 const empty: Values = {
   fullName: "",
@@ -19,7 +20,7 @@ const empty: Values = {
   terms: false,
 }
 
-// Form, then the emailed code, then "Email verified". The account exists only once the code is right.
+// Better-Auth creates an unverified account first. Only the verified code signs it in.
 export function SignupFlow({
   onDone,
   autoFocus,
@@ -29,6 +30,7 @@ export function SignupFlow({
   const mode = useContext(AuthMode)
   const signup = useSignup()
   const verify = useVerifySignup()
+  const resend = useResendSignup()
   const [step, setStep] = useState<"form" | "code" | "done">("form")
   const [values, setValues] = useState(empty)
   const send = (v: Values) =>
@@ -53,11 +55,24 @@ export function SignupFlow({
         </Button>
       </SuccessStep>
     )
+  if (step === "code" && verify.authenticated)
+    return (
+      <SessionStep
+        pending={verify.session.isPending}
+        error={verify.session.isError}
+        onRetry={() =>
+          verify.session.mutate(undefined, { onSuccess: () => setStep("done") })
+        }
+        onBack={() => {
+          verify.reset()
+          setStep("form")
+        }}
+      />
+    )
   if (step === "code")
     return (
       <CodeStep
         email={values.email}
-        demoCode={signup.data?.demoCode}
         verifying={verify.isPending}
         error={verify.error}
         onVerify={(code) =>
@@ -66,15 +81,17 @@ export function SignupFlow({
             { onSuccess: () => setStep("done") }
           )
         }
-        resending={signup.isPending}
-        resendFailed={signup.isError}
+        resending={resend.isPending}
+        resendFailed={resend.isError}
+        resendError={resend.error}
         onResend={() => {
           verify.reset()
-          send(values)
+          resend.mutate(values.email)
         }}
         onBack={() => {
           signup.reset()
           verify.reset()
+          resend.reset()
           setStep("form")
         }}
       />
@@ -92,7 +109,7 @@ export function SignupFlow({
         error={signup.error}
         onSubmit={send}
       />
-      <SocialSignIn onDone={onDone} />
+      <SocialSignIn redirect={login.redirect} />
       <AuthSwitch
         {...login}
         text={t("auth.have_account")}

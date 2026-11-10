@@ -1988,20 +1988,13 @@ describe("account, settings side", () => {
   const user = () => db.users.find((u) => u.id === "u-1")!
   const patch = (body: object, as = "u-1") => call("PATCH", "/me", { as, body })
 
-  it("saves a new phone only with the code, and then counts it as verified", async () => {
-    user().verifiedPhone = false
+  it("saves a new phone without a code and marks it unverified", async () => {
+    user().verifiedPhone = true
     const noCode = await patch({ phone: "+249922222222" })
-    expect(noCode.status).toBe(422)
-    expect(noCode.body.code).toBe("otp_invalid")
-    expect(
-      (await patch({ phone: "+249922222222", code: "111111" })).status
-    ).toBe(422)
-    expect(user().phone).not.toBe("+249922222222")
-    const ok = await patch({ phone: "+249922222222", code: "123456" })
-    expect(ok.status).toBe(200)
-    expect(ok.body).toMatchObject({
+    expect(noCode.status).toBe(200)
+    expect(noCode.body).toMatchObject({
       phone: "+249922222222",
-      verifiedPhone: true,
+      verifiedPhone: false,
     })
   })
 

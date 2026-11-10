@@ -7,6 +7,7 @@ import { keys } from "@/lib/api/query-keys"
 import { okSchema } from "@sayaratak/shared/schemas/api"
 import { meQuery } from "@/features/auth/me-query"
 import { useLogin, useLogout } from "@/features/auth/queries"
+import { authGate } from "@/features/auth/auth-gate"
 import { useResetDemoData } from "@/features/admin/queries"
 import { SelectInput } from "./select-input"
 import {
@@ -99,6 +100,15 @@ export function DevPanel({ onClose }: { onClose: () => void }) {
           ]}
           onChange={async (v) => {
             if (!v) return
+            if (v === "admin@demo.sy") {
+              await logout.mutateAsync()
+              authGate.setState(() => ({
+                open: true,
+                pending: () => void refresh(),
+              }))
+              onClose()
+              return
+            }
             if (v === "out") await logout.mutateAsync()
             else
               await login.mutateAsync({

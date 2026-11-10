@@ -207,7 +207,7 @@ route("POST", "/auth/reset", async (c) => {
 })
 route("POST", "/auth/logout", () => withSession(null, { ok: true }))
 
-// A new phone or email is saved only with the code sent to it (always 123456), and counts as verified then. "" removes the phone; the email stays, since sign-in is by email. "" on the city or the avatar clears it.
+// Match the real API (11.1): email needs a code; phone saves unverified until SMS exists.
 route("PATCH", "/me", async (c) => {
   const user = needUser(c)
   const { code, email, phone, cityId, avatarUrl, locale, ...rest } =
@@ -226,10 +226,10 @@ route("PATCH", "/me", async (c) => {
     }
     if (db.users.some((u) => u.id !== user.id && u[field] === value))
       throw fail(409, "exists")
-    if (code !== "123456")
+    if (field === "email" && code !== "123456")
       throw fail(422, "otp_invalid", { code: "auth.otp_invalid" })
     user[field] = value
-    user[verified] = true
+    user[verified] = field === "email"
   }
   change("email", "verifiedEmail", email)
   change("phone", "verifiedPhone", phone)

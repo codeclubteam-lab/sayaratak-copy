@@ -68,7 +68,8 @@ export function ForgotFlow() {
   if (step === "password" && verify.data)
     return (
       <NewPasswordForm
-        token={verify.data.token}
+        email={verify.data.email}
+        code={verify.data.code}
         onDone={() => setStep("done")}
         onExpired={restart}
       />
@@ -77,7 +78,6 @@ export function ForgotFlow() {
     return (
       <CodeStep
         email={email}
-        demoCode={forgot.data?.demoCode}
         verifying={verify.isPending}
         error={verify.error}
         onVerify={(code) =>
@@ -88,6 +88,7 @@ export function ForgotFlow() {
         }
         resending={forgot.isPending}
         resendFailed={forgot.isError}
+        resendError={forgot.error}
         onResend={() => {
           verify.reset()
           send(email)

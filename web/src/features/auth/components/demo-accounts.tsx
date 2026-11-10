@@ -14,7 +14,13 @@ const accounts = [
   { label: "auth.demo_admin", email: "admin@demo.sy" },
 ] as const
 
-export function DemoAccounts({ onDone }: { onDone: () => void }) {
+export function DemoAccounts({
+  onDone,
+  onAdminChallenge,
+}: {
+  onDone: () => void
+  onAdminChallenge: (email: string) => void
+}) {
   const { t } = useT()
   const login = useLogin()
   if (import.meta.env.VITE_DEMO !== "true") return null
@@ -37,7 +43,12 @@ export function DemoAccounts({ onDone }: { onDone: () => void }) {
             onClick={() =>
               login.mutate(
                 { email, password: "Demo1234" },
-                { onSuccess: onDone }
+                {
+                  onSuccess: (result) =>
+                    "twoFactorRedirect" in result
+                      ? onAdminChallenge(email)
+                      : onDone(),
+                }
               )
             }
           >

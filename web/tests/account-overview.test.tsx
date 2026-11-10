@@ -252,23 +252,13 @@ describe("AccountOverviewPage", () => {
     expect(screen.queryByText("Verify your phone number")).toBeNull()
   })
 
-  it("verifies the phone with the code and then hides the notice", async () => {
+  it("does not offer phone verification even with the old feature flag on, until SMS exists", async () => {
     vi.stubEnv("VITE_FEATURE_OTP", "true")
     expect(me().phone).toBeTruthy()
     me().verifiedPhone = false
     await open()
-    expect(await screen.findByText("Verify your phone number")).toBeTruthy()
-    fireEvent.click(screen.getByRole("button", { name: "Verify phone" }))
-    const dialog = await screen.findByRole("dialog")
-    fireEvent.change(
-      await within(dialog).findByLabelText("Verification code"),
-      {
-        target: { value: "123456" },
-      }
-    )
-    await waitFor(() => expect(me().verifiedPhone).toBe(true))
-    await waitFor(() =>
-      expect(screen.queryByText("Verify your phone number")).toBeNull()
-    )
+    await screen.findByText("Needs attention")
+    expect(screen.queryByText("Verify your phone number")).toBeNull()
+    expect(me().verifiedPhone).toBe(false)
   })
 })
