@@ -25,7 +25,6 @@ const errorKey = (e: ApiError) =>
 // Shared by sign-up, reset and the admin second step. Six digits submit automatically.
 export function CodeStep({
   email,
-  demoCode,
   verifying,
   error,
   onVerify,
@@ -39,7 +38,6 @@ export function CodeStep({
   resendError,
 }: {
   email: string
-  demoCode?: string
   verifying: boolean
   error: ApiError | null
   onVerify: (code: string) => void
@@ -122,11 +120,6 @@ export function CodeStep({
           </div>
         )}
       </FormField>
-      {import.meta.env.VITE_DEMO === "true" && demoCode && (
-        <p className="rounded-lg bg-muted px-3 py-2 text-ui">
-          {t("auth.code_demo")} <bdi dir="ltr">{demoCode}</bdi>
-        </p>
-      )}
       <Button
         type="button"
         variant="outline"

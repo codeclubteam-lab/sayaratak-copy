@@ -12,6 +12,7 @@ import {
   resolveAuthGate,
   useRequireAuth,
 } from "@/features/auth/auth-gate"
+import { restore, snapshot } from "@/lib/api/mutation"
 import { meQuery, useLogin } from "@/features/auth/queries"
 import {
   favoriteQueries,
@@ -205,5 +206,16 @@ describe("listing list query", () => {
     expect(
       result.current.data?.items.every((l) => l.vehicleType === "truck")
     ).toBe(true)
+  })
+})
+
+describe("mutation cache snapshot", () => {
+  it("captures and restores matching query keys", async () => {
+    const qc = new QueryClient()
+    qc.setQueryData(["sample", "a"], { count: 1 })
+    const snap = await snapshot(qc, ["sample"])
+    qc.setQueryData(["sample", "a"], { count: 2 })
+    restore(qc, snap)
+    expect(qc.getQueryData(["sample", "a"])).toEqual({ count: 1 })
   })
 })

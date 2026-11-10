@@ -1,14 +1,10 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "@tanstack/react-router"
 import { useState } from "react"
 
-import { apiFetch } from "@/lib/api/client"
-import { keys } from "@/lib/api/query-keys"
-import { okSchema } from "@sayaratak/shared/schemas/api"
 import { meQuery } from "@/features/auth/me-query"
 import { useLogin, useLogout } from "@/features/auth/queries"
 import { authGate } from "@/features/auth/auth-gate"
-import { useResetDemoData } from "@/features/admin/queries"
 import { SelectInput } from "./select-input"
 import {
   failModes,
@@ -31,11 +27,9 @@ const accounts = [
 // Dev only, so the labels are plain English. Each change re-runs the loaders to show the matching state.
 export function DevPanel({ onClose }: { onClose: () => void }) {
   const router = useRouter()
-  const qc = useQueryClient()
   const me = useQuery(meQuery)
   const login = useLogin()
   const logout = useLogout()
-  const reset = useResetDemoData()
   const [fail, setFail] = useState<FailMode>(getFailMode)
   const [latency, setLatencyState] = useState(getLatency)
   const refresh = () => router.invalidate()
@@ -119,34 +113,6 @@ export function DevPanel({ onClose }: { onClose: () => void }) {
           }}
         />
       </label>
-      <button
-        type="button"
-        onClick={() =>
-          apiFetch("/mock/expire-session", { method: "POST", schema: okSchema })
-        }
-      >
-        Expire session (next call gets 401)
-      </button>
-      <button
-        type="button"
-        onClick={async () => {
-          await apiFetch("/mock/ban-me", { method: "POST", schema: okSchema })
-          await qc.invalidateQueries({ queryKey: keys.me })
-          void refresh()
-        }}
-      >
-        Ban signed-in account
-      </button>
-      <button
-        type="button"
-        disabled={reset.isPending}
-        onClick={async () => {
-          await reset.mutateAsync()
-          window.location.reload()
-        }}
-      >
-        Reset data
-      </button>
     </aside>
   )
 }

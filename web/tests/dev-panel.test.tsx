@@ -46,6 +46,11 @@ describe("dev panel", () => {
     expect(
       await screen.findByLabelText("Dev panel", undefined, { timeout: 5000 })
     ).toBeTruthy()
+    expect(screen.queryByRole("button", { name: /Expire session/ })).toBeNull()
+    expect(
+      screen.queryByRole("button", { name: /Ban signed-in account/ })
+    ).toBeNull()
+    expect(screen.queryByRole("button", { name: "Reset data" })).toBeNull()
     fireEvent.keyDown(window, { key: "D", ctrlKey: true, shiftKey: true })
     expect(screen.queryByLabelText("Dev panel")).toBeNull()
   })

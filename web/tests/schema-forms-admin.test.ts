@@ -1,6 +1,5 @@
 import { expect, it } from "vitest"
 
-import { restoreConfirmSchema } from "@/features/admin-backups/schemas"
 import {
   broadcastFormDefaults,
   broadcastFormSchema,
@@ -51,12 +50,6 @@ const broadcast = {
 const phone = "+249912345678"
 
 runCases([
-  {
-    name: "restoreConfirmSchema",
-    schema: restoreConfirmSchema("RESTORE"),
-    valid: [{ phrase: " RESTORE " }],
-    bad: [["wrong word", { phrase: "restore" }, "validation.restore_phrase"]],
-  },
   {
     name: "categoryFormSchema",
     schema: categoryFormSchema,

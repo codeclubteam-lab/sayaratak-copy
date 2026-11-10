@@ -7,7 +7,6 @@ import { PageHeader } from "@/components/app/page-header"
 import { SectionError } from "@/components/app/section-error"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ContactSettings } from "./contact-settings"
-import { DemoTools } from "./demo-tools"
 import { ListingSettings } from "./listing-settings"
 import { PaymentSettings } from "./payment-settings"
 
@@ -25,7 +24,6 @@ export function SiteSettingsPage() {
           <ListingSettings settings={settings.data} />
           <PaymentSettings settings={settings.data} />
           <ContactSettings settings={settings.data} />
-          {import.meta.env.VITE_DEMO === "true" && <DemoTools />}
         </div>
       ) : settings.isError ? (
         <SectionError

@@ -51,6 +51,5 @@
   "validation.ad_target": "Choose where the banner opens",
   "validation.ad_pages": "Choose at least one page",
   "validation.country_code_taken": "This code is already in use",
-  "validation.restore_phrase": "Type the word exactly as shown",
   "validation.not_editable": "This field cannot be changed here"
 }

@@ -8,7 +8,6 @@ import type { ApiError } from "@/lib/api/client"
 import { apiFetch } from "@/lib/api/client"
 import { useApiMutation } from "@/lib/api/mutation"
 import { keys, publicKeyRoots } from "@/lib/api/query-keys"
-import { markSignIn } from "@/lib/sign-in-flag"
 import { authClient } from "@/lib/auth-client"
 import { authCall } from "@/lib/api/auth-error"
 import {
@@ -19,7 +18,6 @@ import {
 } from "@sayaratak/shared/schemas/api"
 import type { z } from "zod"
 import type {
-  oauthInputSchema,
   passwordInputSchema,
   profilePatchSchema,
 } from "@sayaratak/shared/schemas/inputs"
@@ -56,36 +54,10 @@ export const draftQuery = (key: string) =>
     staleTime: 0,
   })
 
-// After sign in the cache holds the user and personal queries refetch. A sign in (not a sign up) also arms the once-per-sign-in reminders.
-function useSignedIn(signIn = true) {
-  const qc = useQueryClient()
-  return (user: User) => {
-    if (signIn) markSignIn()
-    qc.setQueryData(keys.me, user)
-    void qc.invalidateQueries({
-      predicate: (q) => q.queryKey[0] !== "me" && q.queryKey[0] !== "taxonomy",
-    })
-    return user
-  }
-}
 const post =
   <TSchema extends z.ZodType>(path: string, schema: TSchema) =>
   (body?: unknown) =>
     apiFetch(path, { method: "POST", body, schema })
-
-// Unmounted mock dialog only, removed in 11.2. Live social buttons use useSocialLogin.
-export function useOauthLogin() {
-  const signedIn = useSignedIn()
-  return useApiMutation(
-    (
-      v: { provider: "google" | "facebook" } & z.input<typeof oauthInputSchema>
-    ) =>
-      post(
-        `/auth/oauth/${v.provider}`,
-        userSchema
-      )({ accountId: v.accountId }).then(signedIn)
-  )
-}
 
 function useSignedOut() {
   const qc = useQueryClient()

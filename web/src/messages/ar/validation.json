@@ -51,6 +51,5 @@
   "validation.ad_target": "اختر ما يفتحه البانر",
   "validation.ad_pages": "اختر صفحة واحدة على الأقل",
   "validation.country_code_taken": "هذا الرمز مستخدم بالفعل",
-  "validation.restore_phrase": "اكتب الكلمة كما هي تمامًا",
   "validation.not_editable": "لا يمكن تغيير هذا الحقل من هنا"
 }

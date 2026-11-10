@@ -433,12 +433,3 @@ export const useUpdateSettings = () =>
   )
 export const useCreateBackup = () =>
   useApiMutation(() => post(backupSchema)("/admin/backups"), touched)
-// A restore replaces every table, so every query refetches.
-export const useRestoreBackup = () =>
-  useApiMutation(
-    (id: string) => post(okSchema)(`/admin/backups/${id}/restore`),
-    [[]]
-  )
-// Reseeds the demo data and signs everyone out.
-export const useResetDemoData = () =>
-  useApiMutation(() => post(okSchema)("/mock/reset"), [["me"]])

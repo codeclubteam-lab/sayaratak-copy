@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SiteSettingsPage } from "@/features/admin-settings/components/site-settings-page"
 import { db, resetDb } from "@/mocks/db"
@@ -10,11 +10,15 @@ window.scrollTo = () => {}
 
 beforeEach(() => {
   resetDb()
+  vi.stubEnv("VITE_DEMO", "true")
   vi.stubGlobal("matchMedia", () => ({
     matches: false,
     addEventListener: () => {},
     removeEventListener: () => {},
   }))
+})
+afterEach(() => {
+  vi.unstubAllEnvs()
 })
 
 const section = async (name: string) =>
@@ -45,5 +49,7 @@ describe("SiteSettingsPage", () => {
     )
     fireEvent.click(listings.getByRole("button", { name: "Save" }))
     await waitFor(() => expect(db.settings.listingExpiryDays).toBe(45))
+    expect(screen.queryByRole("region", { name: "Demo tools" })).toBeNull()
+    expect(screen.queryByRole("button", { name: "Reset demo data" })).toBeNull()
   })
 })

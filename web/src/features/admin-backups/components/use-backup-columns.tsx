@@ -3,20 +3,35 @@ import type { Locale } from "@sayaratak/shared/schemas/locale"
 import { useT } from "@/lib/i18n/use-t"
 import type { DataColumn } from "@/lib/table"
 import type { Backup } from "@sayaratak/shared/schemas/admin"
+import { CopyButton } from "@/components/app/copy-button"
 import { Badge } from "@/components/ui/badge"
 import { BackupStatus } from "./backup-status"
-import { RestoreButton } from "./restore-button"
 
 export const backupDate = (iso: string, locale: Locale) =>
   `${formatDate(iso, locale)} ${formatTime(iso, locale)}`
 
-// Date, type, size, status and Restore. Newest first from the server, so no column sorts.
-export function useBackupColumns(
-  onRestore: (backup: Backup) => void,
-  busy: boolean
-): DataColumn<Backup>[] {
+export function BackupId({ id }: { id: string }) {
+  const { t } = useT()
+  return (
+    <span className="inline-flex items-center gap-1">
+      <bdi dir="ltr" className="font-mono text-ui">
+        {id}
+      </bdi>
+      <CopyButton value={id} label={t("admin.backup_copy_id", { id })} />
+    </span>
+  )
+}
+
+// ID, date, type, size and status. Newest first from the server, so no column sorts.
+export function useBackupColumns(): DataColumn<Backup>[] {
   const { t, locale } = useT()
   return [
+    {
+      id: "id",
+      header: t("admin.backup_col_id"),
+      enableHiding: false,
+      cell: ({ row }) => <BackupId id={row.original.id} />,
+    },
     {
       id: "date",
       header: t("admin.backup_col_date"),
@@ -45,19 +60,6 @@ export function useBackupColumns(
       id: "status",
       header: t("admin.backup_col_status"),
       cell: ({ row }) => <BackupStatus status={row.original.status} />,
-    },
-    {
-      id: "actions",
-      header: t("admin.promos_col_actions"),
-      enableHiding: false,
-      cell: ({ row }) => (
-        <RestoreButton
-          backup={row.original}
-          date={backupDate(row.original.createdAt, locale)}
-          busy={busy}
-          onRestore={() => onRestore(row.original)}
-        />
-      ),
     },
   ]
 }
