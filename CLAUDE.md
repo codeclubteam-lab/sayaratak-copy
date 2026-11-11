@@ -22,6 +22,7 @@ Product: Sayaratak, a vehicle and auto-services marketplace for Sudan (cars, tru
 
 Settled decisions (override anything in the plan that says otherwise)
 
+Container runtime: Podman Desktop (`podman` and `podman-compose`) replaces Docker locally — never invoke `docker` or `docker compose` (no Docker daemon runs on this machine). `podman-compose` works without `podman.socket` and does not support `--wait`; use `podman-compose -f api/docker-compose.yml up -d postgres-test` (poll with `podman-compose -f api/docker-compose.yml exec postgres-test pg_isready -U sayaratak -d sayaratak`), `podman-compose -f api/docker-compose.yml stop postgres-test`, and `podman` for any container run/build (e.g. `PG_CLIENT_CMD`).
 Package manager: Bun only. No pnpm or npm. The "packageManager": "pnpm" line in web/.cta.json is stale scaffold output; ignore it.
 Import alias is @/ (tsconfig.json, components.json). implementation.md writes ~/; read that as @/.
 Fonts: IBM Plex Sans + IBM Plex Sans Arabic (A5). The template's Inter is to be replaced.

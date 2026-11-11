@@ -35,7 +35,8 @@ Product: Sayaratak, a vehicle and auto-services marketplace for Sudan (cars, tru
 - Fonts: IBM Plex Sans and IBM Plex Sans Arabic.
 - UI primitives: shadcn (`base-nova`) on `@base-ui/react` (`"rtl": true`). Check installed Base UI APIs instead of older Radix plan wording (`DirectionProvider`, `shadcn migrate rtl`). Use `render` instead of `asChild`, and style navigation links with `buttonVariants` instead of wrapping links in `Button`. Add shadcn components with `bunx --bun shadcn@latest add <name>`.
 - Auth & account integration: Better-Auth `1.7.10` handles authentication (`emailOTP`, admin `twoFactor` email code, social OAuth redirects, `bearer` for native apps), while `GET /api/v1/me` (currently `/api/me` on the mock) still serves the shared `User` shape and `POST /me/password` stays (decision O2).
-- Infrastructure choices: PostgreSQL 18 everywhere (`api/docker-compose.yml` exposes `postgres` on 5432 and tmpfs `postgres-test` on 5434); Cloudinary for media and private receipts/verification documents streamed by the API; manual Bankak transfers with receipt upload; Cloudflare R2 for private backups; Render target hosting.
+- Container runtime: Podman Desktop (`podman` and `podman-compose`) replaces Docker locally — never invoke `docker` or `docker compose` (no Docker daemon runs on this machine). `podman-compose` works without `podman.socket` (whereas `podman compose` delegates to `docker-compose` and fails if `podman.socket` is inactive), and `podman-compose up` has no `--wait` flag. Use `podman` for container runs/builds (`PG_CLIENT_CMD`, `api/Dockerfile`) and `podman-compose -f api/docker-compose.yml` for the local Postgres services.
+- Infrastructure choices: PostgreSQL 18 everywhere (`api/docker-compose.yml` exposes `postgres` on 5432 and tmpfs `postgres-test` on 5434, run via Podman Desktop); Cloudinary for media and private receipts/verification documents streamed by the API; manual Bankak transfers with receipt upload; Cloudflare R2 for private backups; Render target hosting.
 
 ## Current state
 
@@ -73,7 +74,7 @@ Never run heavy suites or checks in parallel on this machine (6.8 GiB RAM). Stop
 - `bun run --cwd api check` (`biome format .`; `format` writes)
 - `bun run --cwd api openapi` (regenerates `api/openapi.json`; required when `/api/v1` routes change)
 - `bun run --cwd api db:generate` / `db:migrate` / `db:seed` / `db:bootstrap` / `create-admin` / `parity`
-- `docker compose -f api/docker-compose.yml up -d --wait postgres-test` before API tests, then `bun test --cwd api --timeout 120000 ...` (DB reset/seed hooks can take > 5 s under load), and `docker compose -f api/docker-compose.yml stop postgres-test` afterward.
+- `podman-compose -f api/docker-compose.yml up -d postgres-test` (then verify readiness with `podman-compose -f api/docker-compose.yml exec postgres-test pg_isready -U sayaratak -d sayaratak`) before API tests, then `bun test --cwd api --timeout 120000 ...` (DB reset/seed hooks can take > 5 s under load), and `podman-compose -f api/docker-compose.yml stop postgres-test` afterward.
 
 ## Target architecture
 
