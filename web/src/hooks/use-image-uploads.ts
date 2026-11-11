@@ -19,6 +19,10 @@ export type PendingUpload = {
 // Resizes each file in the browser, uploads it with progress, and hands back the Media.
 export function useImageUploads(onDone: (media: Media) => void) {
   const [items, setItems] = useState<PendingUpload[]>([])
+  const done = useRef(onDone)
+  useEffect(() => {
+    done.current = onDone
+  })
   const previews = useRef(new Set<string>())
   const removed = useRef(new Set<string>())
   useEffect(() => {
@@ -49,7 +53,7 @@ export function useImageUploads(onDone: (media: Media) => void) {
       )
       if (removed.current.has(key)) return
       drop(key)
-      onDone(media)
+      done.current(media)
     } catch (error) {
       if (removed.current.has(key)) return
       const fileError =

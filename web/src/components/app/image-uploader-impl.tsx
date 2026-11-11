@@ -12,6 +12,8 @@ import { MediaTile } from "./media-tile"
 import { PendingUploadTile } from "./pending-upload-tile"
 import { UploadDropzone } from "./upload-dropzone"
 
+const mediaKey = (list: Media[]) => list.map((m) => m.id).join("\0")
+
 export function ImageUploaderImpl({
   mode,
   value,
@@ -24,18 +26,26 @@ export function ImageUploaderImpl({
 }: ImageUploaderProps) {
   const { t } = useT()
   const single = mode === "single"
-  // Uploads finish later, so they append to the newest value, not the one this render saw.
+  // Uploads finish later, so keep appended items until `value` carries them; resync only when `value` changes.
   const latest = useRef(value)
-  useEffect(() => {
-    latest.current = value
-  })
+  const propKey = useRef(mediaKey(value))
+  const queued = useRef<Media[]>([])
   const commit = (next: Media[]) => {
     latest.current = next
     onChange(next)
   }
-  const { items, add, retry, dismiss } = useImageUploads((media) =>
+  useEffect(() => {
+    const key = mediaKey(value)
+    if (key === propKey.current) return
+    propKey.current = key
+    const ids = new Set(value.map((m) => m.id))
+    queued.current = queued.current.filter((m) => !ids.has(m.id))
+    latest.current = single ? value : [...value, ...queued.current]
+  })
+  const { items, add, retry, dismiss } = useImageUploads((media) => {
+    if (!single) queued.current = [...queued.current, media]
     commit(single ? [media] : [...latest.current, media])
-  )
+  })
   const picker = useRef<HTMLInputElement>(null)
   const dragFrom = useRef<number | null>(null)
   const [announce, setAnnounce] = useState("")
@@ -46,7 +56,7 @@ export function ImageUploaderImpl({
     : Math.max(0, max - value.length - items.length)
   const take = (files: File[]) => add(files.slice(0, room))
   const move = (from: number, to: number) => {
-    const next = [...value]
+    const next = [...latest.current]
     const [moved] = next.splice(from, 1)
     if (!moved) return
     next.splice(to, 0, moved)
@@ -137,7 +147,9 @@ export function ImageUploaderImpl({
               count={value.length}
               cover={cover}
               onMove={(to) => move(index, to)}
-              onRemove={() => commit(value.filter((m) => m.id !== media.id))}
+              onRemove={() =>
+                commit(latest.current.filter((m) => m.id !== media.id))
+              }
               onDragStart={() => {
                 dragFrom.current = index
               }}

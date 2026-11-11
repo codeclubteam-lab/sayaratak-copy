@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 
 import { useT } from "@/lib/i18n/use-t"
+import { mediaSrc, mediaSrcSet } from "@/lib/media"
 import { safeBackground, type Slide, type SlideIcon } from "@/lib/slide"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
@@ -68,7 +69,9 @@ export function HeroSlide({
               ref={(img) => {
                 if (img?.complete && img.naturalWidth === 0) setFailed(true)
               }}
-              src={photo.src}
+              src={mediaSrc(photo.src, 960)}
+              srcSet={mediaSrcSet(photo.src, 1280)}
+              sizes="(min-width: 768px) 50vw, 100vw"
               width={1600}
               height={400}
               alt={photo.alt}

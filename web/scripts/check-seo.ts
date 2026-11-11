@@ -7,7 +7,7 @@ import {
   canonicalOf,
   check,
   get,
-  getJson,
+  getApiJson,
   pathOf,
   result,
   robotsOf,
@@ -78,9 +78,7 @@ for (const [dir, api] of [
   ["/workshops/", "workshops"],
   ["/mechanics/", "mechanics"],
 ] as const) {
-  const { total } = (await (await get(`/api/${api}?pageSize=1`)).json()) as {
-    total: number
-  }
+  const { total } = await getApiJson<{ total: number }>(`/${api}?pageSize=1`)
   check(
     under(dir) === total,
     `sitemap ${dir}: ${under(dir)} urls, API ${total}`
@@ -113,7 +111,7 @@ const samples: [string, string[]][] = [
   ["/en/parts", []],
   // Step 14.7: every page type in the other language too, a part, an Arabic slug and deep pages of a list.
   [
-    `/en/listing/${(await getJson<{ items: { slug: string }[] }>("/api/listings?kind=part&pageSize=1")).items[0]!.slug}`,
+    `/en/listing/${(await getApiJson<{ items: { slug: string }[] }>("/listings?kind=part&pageSize=1")).items[0]!.slug}`,
     ["BreadcrumbList", "Product"],
   ],
   [

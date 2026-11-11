@@ -111,7 +111,7 @@ export const auth = betterAuth({
     useSecureCookies: isProduction,
     defaultCookieAttributes: { sameSite: "lax", httpOnly: true },
     crossSubDomainCookies: {
-      enabled: isProduction,
+      enabled: Boolean(env.COOKIE_DOMAIN),
       domain: env.COOKIE_DOMAIN,
     },
     // Better-Auth reads only our header, which carries the A3 client IP, so a

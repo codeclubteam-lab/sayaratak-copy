@@ -15,6 +15,7 @@ const codes: Record<string, string> = {
   USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL: "exists",
   EMAIL_ALREADY_EXISTS: "exists",
   USER_BANNED: "banned",
+  BANNED_USER: "banned",
   EMAIL_NOT_VERIFIED: "email_not_verified",
   UNAUTHORIZED: "unauthenticated",
   SESSION_EXPIRED: "unauthenticated",

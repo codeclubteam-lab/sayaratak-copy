@@ -7,7 +7,8 @@ import process from "node:process"
 import { parseArgs } from "node:util"
 import { chromium } from "@playwright/test"
 
-import { routesFor, sessions } from "../e2e/routes"
+import { roleCookies } from "../e2e/auth"
+import { routesFor } from "../e2e/routes"
 import type { Role } from "../e2e/routes"
 
 const { values } = parseArgs({
@@ -140,10 +141,7 @@ const browser = await chromium.launch({ channel: "chrome" })
 let failed = 0
 for (const role of roles) {
   const context = await browser.newContext()
-  if (role !== "anon")
-    await context.addCookies([
-      { name: "sy_session", value: sessions[role], url: base },
-    ])
+  if (role !== "anon") await context.addCookies(await roleCookies(role, base))
   const page = await context.newPage()
   for (const route of routesFor(role)) {
     // Public pages once (as anon); each role adds only its own dashboard.

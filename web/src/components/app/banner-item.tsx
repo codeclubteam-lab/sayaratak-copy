@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 
 import { useT } from "@/lib/i18n/use-t"
+import { mediaSrc, mediaSrcSet } from "@/lib/media"
 import { bannerHref } from "@/lib/navigation"
 import { cn } from "@/lib/utils"
 import type { Banner } from "@sayaratak/shared/schemas/admin"
@@ -57,7 +58,9 @@ export function BannerItem({ banner }: { banner: Banner }) {
       ) : !missing ? (
         <img
           ref={image}
-          src={banner.imageUrl[locale]}
+          src={mediaSrc(banner.imageUrl[locale], 1280)}
+          srcSet={mediaSrcSet(banner.imageUrl[locale], 1280)}
+          sizes="100vw"
           width={1200}
           height={200}
           loading="lazy"

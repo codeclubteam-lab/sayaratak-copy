@@ -4,15 +4,6 @@
 export type Role =
   "anon" | "user" | "dealer" | "workshop" | "mechanic" | "admin"
 
-// Seed user id per role, sent as the sy_session cookie (src/mocks/db.ts).
-export const sessions: Record<Exclude<Role, "anon">, string> = {
-  user: "u-omar",
-  dealer: "u-dealer",
-  workshop: "u-workshop",
-  mechanic: "u-mechanic",
-  admin: "u-admin",
-}
-
 // Seeded params (fixed faker seed).
 const listing = "chevrolet-cruze-2014-single-owner-khartoum-l0000p"
 const dealerListing = "l0008g"

@@ -100,11 +100,12 @@ describe("auth", () => {
     })
     expect(locked.status).toBe(429)
     expect(locked.body.retryAfter).toBeGreaterThan(0)
-    const sent = await call("POST", "/auth/forgot", {
+    await call("POST", "/auth/forgot", {
       body: { email: "admin@demo.sy" },
     })
+    const code = db.codes.get("reset:admin@demo.sy")?.code ?? ""
     const verified = await call("POST", "/auth/forgot/verify", {
-      body: { email: "admin@demo.sy", code: sent.body.demoCode },
+      body: { email: "admin@demo.sy", code },
     })
     await call("POST", "/auth/reset", {
       body: { token: verified.body.token, password: "Newpass123" },
@@ -130,7 +131,8 @@ describe("auth", () => {
       body: { email: "nobody@example.com" },
     })
     expect(res.status).toBe(200)
-    expect(res.body.demoCode).toBeUndefined()
+    expect(res.body).toEqual({ ok: true })
+    expect(db.codes.get("reset:nobody@example.com")).toBeUndefined()
   })
   it("signup creates the account only after the emailed code, and refuses a taken email", async () => {
     const body = {
@@ -139,9 +141,11 @@ describe("auth", () => {
       password: "Passw0rd1",
     }
     const sent = await call("POST", "/auth/signup", { body })
-    expect(sent.body.demoCode).toMatch(/^\d{6}$/)
+    expect(sent.body).toEqual({ ok: true })
+    const code = db.codes.get(`signup:${body.email}`)?.code ?? ""
+    expect(code).toMatch(/^\d{6}$/)
     expect(db.users.some((u) => u.email === body.email)).toBe(false)
-    const wrong = sent.body.demoCode === "000000" ? "111111" : "000000"
+    const wrong = code === "000000" ? "111111" : "000000"
     expect(
       (
         await call("POST", "/auth/signup/verify", {
@@ -150,7 +154,7 @@ describe("auth", () => {
       ).body.code
     ).toBe("otp_invalid")
     const res = await call("POST", "/auth/signup/verify", {
-      body: { email: body.email, code: sent.body.demoCode },
+      body: { email: body.email, code },
     })
     expect(res.status).toBe(201)
     expect(res.body.onboardingDone).toBe(false)
@@ -164,10 +168,11 @@ describe("auth", () => {
   })
   it("a sign-up code is gone after five wrong tries", async () => {
     const email = "five@example.com"
-    const sent = await call("POST", "/auth/signup", {
+    await call("POST", "/auth/signup", {
       body: { fullName: "Five Tries", email, password: "Passw0rd1" },
     })
-    const wrong = sent.body.demoCode === "000000" ? "111111" : "000000"
+    const code = db.codes.get(`signup:${email}`)?.code ?? ""
+    const wrong = code === "000000" ? "111111" : "000000"
     for (let i = 0; i < 5; i++)
       await call("POST", "/auth/signup/verify", {
         body: { email, code: wrong },
@@ -175,7 +180,7 @@ describe("auth", () => {
     expect(
       (
         await call("POST", "/auth/signup/verify", {
-          body: { email, code: sent.body.demoCode },
+          body: { email, code },
         })
       ).body.code
     ).toBe("code_expired")

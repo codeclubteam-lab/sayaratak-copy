@@ -115,8 +115,11 @@ for (const { role, name, directory, resume, steps } of runs)
     await freshAccount(page, name, `${role}@journey.sy`)
     await visit(page, at("/onboarding/role"))
     await page
-      .getByRole("radio", {
-        name: new RegExp(`^${t(`onboarding.role_${role}_title`)}`),
+      .locator("label")
+      .filter({
+        has: page.getByRole("radio", {
+          name: new RegExp(`^${t(`onboarding.role_${role}_title`)}`),
+        }),
       })
       .click()
     const next = page.getByRole("button", {
@@ -145,7 +148,8 @@ for (const { role, name, directory, resume, steps } of runs)
         saves &&
         page.waitForResponse(
           (r) =>
-            r.url().includes("/api/drafts/") && r.request().method() === "PATCH"
+            r.url().includes("/api/v1/drafts/") &&
+            r.request().method() === "PATCH"
         )
       await page
         .getByRole("button", { name: t("onboarding.save_exit") })

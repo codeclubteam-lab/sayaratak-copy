@@ -1,12 +1,17 @@
+import process from "node:process"
+
 import { expect, test } from "@playwright/test"
 
-import { routesFor, sessions } from "./routes"
+import { resetDb, resetLimits, roleCookies } from "./auth"
+import { routesFor } from "./routes"
 import type { Role } from "./routes"
 
-// Empty data (14.6): a second production server runs with MOCK_EMPTY=true (port 3101). Every page still renders, shows
+// Empty data (14.6): runs against `/api/_test/empty` on postgres-test. Every page still renders, shows
 // no broken values, and each empty state offers something to do.
-const baseURL = "http://localhost:3101"
-test.use({ baseURL })
+
+test.beforeAll(async () => {
+  if (process.env.STATES_EMPTY !== "1") await resetDb("empty")
+})
 
 const roles: Array<Role> = [
   "anon",
@@ -45,11 +50,10 @@ const inspect = () => {
 
 for (const role of roles)
   test.describe(`empty data ${role}`, () => {
-    test.beforeEach(async ({ context }) => {
+    test.beforeEach(async ({ context, baseURL }) => {
+      await resetLimits()
       if (role !== "anon")
-        await context.addCookies([
-          { name: "sy_session", value: sessions[role], url: baseURL },
-        ])
+        await context.addCookies(await roleCookies(role, baseURL!))
     })
     for (const locale of ["ar", "en"] as const)
       for (const route of routesFor(role)) {

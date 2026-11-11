@@ -83,7 +83,7 @@ test("J1 search with filters, open a listing, call and WhatsApp count in the sel
     .context()
     .route("https://wa.me/**", (route) => route.fulfill({ body: "" }))
   const counted = page.waitForResponse(
-    (r) => r.url().endsWith("/api/events") && r.ok()
+    (r) => r.url().endsWith("/api/v1/events") && r.ok()
   )
   await wa.click()
   await counted

@@ -57,6 +57,7 @@ export async function seedSite(
 }
 
 async function seedEvents(ex: Executor, data: Seed) {
+  if (!data.events.length) return
   // The mock keeps one row per day and target with a count per type; a zero count is no row.
   const counters = data.events.flatMap((e) =>
     eventTypeSchema.options

@@ -1,10 +1,18 @@
+import process from "node:process"
 import { defineConfig } from "@playwright/test"
 
 import type { Options } from "./e2e/journeys/fixtures"
 
-// End-to-end journeys (14.8). The mock DB is one per server and every journey resets it, so they run one at a time
-// on their own server (3102), apart from the smoke suite. `bun run test:journeys` builds first.
+// End-to-end journeys (14.8, 11.5): each journey resets postgres-test, so they run one at a time
+// on their own server (3102) backed by the test-mode API (4000). `bun run test:journeys` builds first.
 const port = 3102
+const apiPort = 4000
+const databaseUrl =
+  process.env.DATABASE_URL ??
+  "postgres://sayaratak:sayaratak@localhost:5434/sayaratak"
+const authSecret =
+  process.env.BETTER_AUTH_SECRET ?? "e2e-test-auth-secret-0123456789abcdef"
+
 const run = (lang: "ar" | "en", width: number) => ({
   name: `${lang}-${width}`,
   use: { lang, viewport: { width, height: 900 } },
@@ -26,10 +34,35 @@ export default defineConfig<Options>({
     navigationTimeout: 30_000,
   },
   projects: [run("ar", 390), run("ar", 1280), run("en", 390), run("en", 1280)],
-  webServer: {
-    command: `PORT=${port} API_BASE_URL=http://localhost:${port} bun run start`,
-    url: `http://localhost:${port}/ar`,
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command:
+        "bun --no-env-file --cwd ../api scripts/migrate.ts && bun --no-env-file --cwd ../api src/index.ts",
+      url: `http://localhost:${apiPort}/api/health/ready`,
+      reuseExistingServer: false,
+      timeout: 120_000,
+      env: {
+        NODE_ENV: "test",
+        APP_ENV: "test",
+        LOG_REQUESTS: "false",
+        PORT: String(apiPort),
+        DATABASE_URL: databaseUrl,
+        BETTER_AUTH_SECRET: authSecret,
+        BETTER_AUTH_URL: `http://localhost:${apiPort}`,
+        WEB_ORIGIN: `http://localhost:${port}`,
+      },
+    },
+    {
+      command: "bun run start",
+      url: `http://localhost:${port}/ar`,
+      reuseExistingServer: false,
+      timeout: 120_000,
+      env: {
+        PORT: String(port),
+        APP_ORIGIN: `http://localhost:${port}`,
+        API_BASE_URL: `http://localhost:${apiPort}`,
+        VITE_API_BASE_URL: `http://localhost:${apiPort}`,
+      },
+    },
+  ],
 })

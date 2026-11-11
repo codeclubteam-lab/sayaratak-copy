@@ -23,9 +23,9 @@ test("J7 workshop sends documents, admin approves, public profile shows the badg
   const files = workshop.locator("main input[type=file]")
   // A document's drop zone goes away once its file is in, so the next empty one is first.
   await expect(files).toHaveCount(2)
-  await files.first().setInputFiles("public/mock/doc-01.svg")
+  await files.first().setInputFiles("public/mock/banner-1.webp")
   await expect(files).toHaveCount(1)
-  await files.first().setInputFiles("public/mock/doc-02.svg")
+  await files.first().setInputFiles("public/mock/banner-2.webp")
   await expect(files).toHaveCount(0)
   const sent = workshop.waitForResponse(
     (r) =>

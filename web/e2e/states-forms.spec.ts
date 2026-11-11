@@ -3,11 +3,18 @@ import { readFileSync } from "node:fs"
 import { expect, test } from "@playwright/test"
 import type { Locator, Page } from "@playwright/test"
 
-import { sessions } from "./routes"
+import {
+  DEMO_PASSWORD,
+  apiBase,
+  fetchOtp,
+  resetDb,
+  resetLimits,
+  roleCookies,
+} from "./auth"
 import type { Role } from "./routes"
 
 // 422 on submit (14.6): a form that fails to save keeps what the person typed, says so, and works again once the
-// failure is gone. The failure goes in after the page has loaded, so only the submit fails.
+// failure is gone. The failure is injected on client API mutations after the page has loaded.
 const text = (locale: string, file: string, key: string) => {
   const all = JSON.parse(
     readFileSync(`src/messages/${locale}/${file}.json`, "utf8")
@@ -16,6 +23,24 @@ const text = (locale: string, file: string, key: string) => {
   if (value === undefined) throw new Error(`missing ${locale} key ${key}`)
   return value
 }
+
+const failMutations = (page: Page, status: 422 | 500) =>
+  page.route(
+    (u) =>
+      u.origin === apiBase &&
+      u.pathname.startsWith("/api/v1/") &&
+      u.pathname !== "/api/v1/events",
+    (route) => {
+      if (route.request().method() === "GET") return route.continue()
+      return route.fulfill({
+        status,
+        contentType: "application/json",
+        body: JSON.stringify({
+          code: status === 422 ? "validation" : "server_error",
+        }),
+      })
+    }
+  )
 
 type Form = {
   name: string
@@ -56,10 +81,10 @@ const forms: Array<Form> = [
     field: (page) => page.locator("input[name=email]"),
     submit: (page) =>
       page.locator("form:has(input[name=email]) button[type=submit]"),
-    value: "sweep@example.com",
+    value: "user@demo.sy",
     error: ["auth", "auth.login_error"],
     prepare: async (page) => {
-      await page.locator("input[name=password]").fill("Sweep-test-1")
+      await page.locator("input[name=password]").fill(DEMO_PASSWORD)
     },
   },
   {
@@ -116,6 +141,10 @@ const forms: Array<Form> = [
   },
 ]
 
+test.beforeEach(async () => {
+  await resetLimits()
+})
+
 for (const form of forms)
   for (const locale of ["ar", "en"] as const)
     test(`422 on submit ${form.name} /${locale}`, async ({
@@ -126,24 +155,20 @@ for (const form of forms)
       const errors: Array<string> = []
       page.on("pageerror", (e) => errors.push(e.message))
       if (form.role !== "anon")
-        await context.addCookies([
-          { name: "sy_session", value: sessions[form.role], url: baseURL },
-        ])
+        await context.addCookies(await roleCookies(form.role, baseURL!))
       await page.goto(`/${locale}${form.path}`, { waitUntil: "networkidle" })
       await page.waitForTimeout(1000)
       const field = form.field(page)
       await field.fill(form.value)
       await form.prepare?.(page)
       const failed = text(locale, ...form.error)
-      await context.addCookies([
-        { name: "mock_fail", value: "422", url: baseURL },
-      ])
+      await failMutations(page, 422)
       await form.submit(page).click()
       // The page says it could not save, and the typed value is still there.
       await expect(page.getByText(failed).first()).toBeVisible()
       await expect(field).toHaveValue(form.value)
       // Once the failure is gone the same button saves.
-      await context.clearCookies({ name: "mock_fail" })
+      await page.unrouteAll()
       await form.submit(page).click()
       await expect(page.getByText(failed)).toHaveCount(0, {
         timeout: 10_000,
@@ -159,14 +184,12 @@ test("optimistic favorite rolls back on failure", async ({
 }) => {
   const errors: Array<string> = []
   page.on("pageerror", (e) => errors.push(e.message))
-  await context.addCookies([
-    { name: "sy_session", value: sessions.user, url: baseURL },
-  ])
+  await context.addCookies(await roleCookies("user", baseURL!))
   await page.goto("/en/search", { waitUntil: "networkidle" })
   await page.waitForTimeout(1000)
   const add = page.getByRole("button", { name: "Save to favorites" }).first()
   await expect(add).toBeVisible()
-  await context.addCookies([{ name: "mock_fail", value: "500", url: baseURL }])
+  await failMutations(page, 500)
   await add.click()
   await expect(
     page.getByText(text("en", "toast", "toast.error_save")).first()
@@ -181,14 +204,16 @@ test("optimistic favorite rolls back on failure", async ({
 // Slow route navigations (14.6): nothing shows for the first 150 ms, then the progress bar, then the skeleton from 400 ms.
 test("slow navigation shows progress at 150 ms and skeleton at 400 ms", async ({
   page,
-  context,
-  baseURL,
 }) => {
   await page.goto("/en", { waitUntil: "networkidle" })
   await page.waitForTimeout(1500)
-  await context.addCookies([
-    { name: "mock_latency", value: "2000", url: baseURL },
-  ])
+  await page.route(
+    (u) => u.origin === apiBase && u.pathname.startsWith("/api/v1/"),
+    async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+      await route.continue()
+    }
+  )
   // Times are taken inside the page, from the click, so Playwright's own delay does not count.
   await page.evaluate(() => {
     const w = window as unknown as {
@@ -236,15 +261,16 @@ test("422 on Publish keeps the wizard on the review screen", async ({
   test.setTimeout(90_000)
   const errors: Array<string> = []
   page.on("pageerror", (e) => errors.push(e.message))
-  await context.addCookies([
-    { name: "sy_session", value: sessions.user, url: baseURL },
-  ])
+  await context.addCookies(await roleCookies("user", baseURL!))
   await page.goto("/en/post", { waitUntil: "networkidle" })
   await page.waitForTimeout(1000)
   const next = page.getByRole("button", { name: /^Next/ })
   const pick = async (label: RegExp) => {
     await page.getByLabel(label).first().click()
-    await page.getByRole("option").first().click()
+    await page
+      .locator("[data-slot=select-content][data-open] [role=option]")
+      .first()
+      .click()
   }
   await page.getByRole("radio", { name: "Car" }).check({ force: true })
   await next.click()
@@ -275,15 +301,15 @@ test("422 on Publish keeps the wizard on the review screen", async ({
   await pick(/^District/)
   await next.click()
   await expect(page).toHaveURL(/step=review/)
-  await context.addCookies([{ name: "mock_fail", value: "422", url: baseURL }])
+  await failMutations(page, 422)
   await page.getByRole("button", { name: "Publish" }).click()
   await expect(page.getByText(/Could not/).first()).toBeVisible()
   await expect(page).toHaveURL(/step=review/)
-  await context.clearCookies({ name: "mock_fail" })
+  await page.unrouteAll()
   await page.getByRole("button", { name: "Publish" }).click()
   await expect(page).toHaveURL(/step=done/, { timeout: 15_000 })
   expect(errors, "thrown errors").toEqual([])
-  await page.request.post("/api/mock/reset")
+  await resetDb("reset")
 })
 
 // Onboarding (14.6): a fresh account picks a role, the save fails with a 422, and the choice is still selected.
@@ -295,35 +321,39 @@ test("422 on the onboarding role step keeps the choice", async ({
 }) => {
   const errors: Array<string> = []
   page.on("pageerror", (e) => errors.push(e.message))
-  const api = await playwright.request.newContext({ baseURL })
+  const api = await playwright.request.newContext({ baseURL: apiBase })
   const email = `sweep${Date.now()}@example.com`
-  const signup = (await (
-    await api.post("/api/auth/signup", {
-      data: { fullName: "Sweep Tester", email, password: "Sweep-test-1" },
-    })
-  ).json()) as { demoCode: string }
-  await api.post("/api/auth/signup/verify", {
-    data: { email, code: signup.demoCode },
+  const signup = await api.post("/api/v1/auth/sign-up/email", {
+    headers: { origin: baseURL! },
+    data: { name: "Sweep Tester", email, password: "Sweep-test-1" },
   })
-  const session = (await api.storageState()).cookies.find(
-    (c) => c.name === "sy_session"
+  expect(signup.ok()).toBe(true)
+  const code = await fetchOtp(email, "email-verification")
+  const verified = await api.post("/api/v1/auth/email-otp/verify-email", {
+    headers: { origin: baseURL! },
+    data: { email, otp: code },
+  })
+  expect(verified.ok()).toBe(true)
+  await context.addCookies(
+    (await api.storageState()).cookies.map((c) => ({
+      name: c.name,
+      value: c.value,
+      url: baseURL!,
+    }))
   )
-  if (!session) throw new Error("no session")
-  await context.addCookies([
-    { name: "sy_session", value: session.value, url: baseURL },
-  ])
+  await api.dispose()
   await page.goto("/en/onboarding", { waitUntil: "networkidle" })
   await page.waitForTimeout(1000)
   const choice = page.getByRole("radio", { name: /^Dealership/ })
   await choice.check({ force: true })
-  await context.addCookies([{ name: "mock_fail", value: "422", url: baseURL }])
+  await failMutations(page, 422)
   await page.getByRole("button", { name: "Continue" }).click()
   await expect(page.getByText(/could not save/i).first()).toBeVisible()
   await expect(page).toHaveURL(/onboarding\/role/)
   await expect(choice).toBeChecked()
-  await context.clearCookies({ name: "mock_fail" })
+  await page.unrouteAll()
   await page.getByRole("button", { name: "Continue" }).click()
   await expect(page).not.toHaveURL(/onboarding\/role/, { timeout: 10_000 })
   expect(errors, "thrown errors").toEqual([])
-  await page.request.post("/api/mock/reset")
+  await resetDb("reset")
 })

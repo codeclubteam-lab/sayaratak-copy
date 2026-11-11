@@ -11,6 +11,7 @@ import { csrfOrigin } from "~/shared/http/csrf-origin"
 import { onError, onNotFound } from "~/shared/http/errors"
 import { healthRoutes } from "~/shared/http/health"
 import { requestLog } from "~/shared/http/request-log"
+import { testRoutes } from "~/test-routes"
 import { buildOpenApi } from "~/shared/openapi/build"
 import { docsRoutes } from "~/shared/openapi/docs"
 import { spec } from "~/shared/openapi/registry"
@@ -123,7 +124,7 @@ const v1 = new Hono()
 
 // Middleware in A3 order. The 500 log line is in onError, the per-request
 // line in requestLog.
-export const app = new Hono()
+const base = new Hono()
   .onError(onError)
   .notFound(onNotFound)
   .use(requestId())
@@ -164,3 +165,8 @@ export const app = new Hono()
   .route("/api", docsRoutes(env.APP_ENV))
   .route("/api/health", healthRoutes())
   .route("/api/v1", v1)
+
+export const app =
+  env.NODE_ENV === "test" && env.APP_ENV === "test"
+    ? base.route("/api/_test", testRoutes())
+    : base

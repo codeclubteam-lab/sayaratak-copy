@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
-    "test:states": "bun run build && STATES=1 playwright test states",
+    "test:states": "bun run build && STATES=1 playwright test states.spec.ts && STATES=1 playwright test states-forms.spec.ts --workers=1 && STATES=1 STATES_EMPTY=1 playwright test states-empty.spec.ts states-edge.spec.ts --workers=1",
     "test:journeys": "bun run build && playwright test -c playwright.journeys.config.ts",
     "size": "bun scripts/check-size.ts",
     "i18n:check": "bun scripts/check-i18n.ts",

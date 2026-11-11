@@ -22,7 +22,10 @@ test("J3 new buyer signs up, messages a seller, gets the reply", async ({
   // A new account sets up its profile before its dashboard opens.
   await page.getByRole("button", { name: t("common.continue") }).click()
   await page
-    .getByRole("radio", { name: t("onboarding.role_user_title") })
+    .locator("label")
+    .filter({
+      has: page.getByRole("radio", { name: t("onboarding.role_user_title") }),
+    })
     .click()
   await page.getByRole("button", { name: t("common.continue") }).click()
   await pick(page, t("form.city"), khartoum[lang])

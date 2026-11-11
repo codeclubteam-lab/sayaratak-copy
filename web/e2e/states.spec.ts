@@ -3,11 +3,12 @@ import { readFileSync } from "node:fs"
 import { expect, test } from "@playwright/test"
 import type { Page } from "@playwright/test"
 
-import { routesFor, sessions } from "./routes"
+import { apiBase, resetLimits, roleCookies } from "./auth"
+import { routesFor } from "./routes"
 import type { Role } from "./routes"
 
-// The states sweep (14.6): each page family under latency, 500, 404 and offline. Fails come from the `mock_fail` and
-// `mock_latency` cookies the dev panel writes, so server rendering and client loaders both see them.
+// The states sweep (14.6): each page family under latency, 500, 404 and offline. Server-rendered routes read
+// `test_fail` and `test_latency` cookies via the states SSR proxy, while client API calls are intercepted directly.
 const message = (locale: string, file: string, key: string) => {
   const all = JSON.parse(
     readFileSync(`src/messages/${locale}/${file}.json`, "utf8")
@@ -100,22 +101,28 @@ function watch(page: Page) {
 const blank = (page: Page) =>
   page.evaluate(() => document.body.innerText.trim().length < 20)
 
-// Dashboards render on the client only, and the session call must keep working, so their failures are injected on
-// every other API call instead of through the cookie.
+// Keep session checks (`/api/v1/me`) and Better-Auth routes live so dashboards still render behind their guard.
+const isDataApi = (u: URL) =>
+  u.origin === apiBase &&
+  u.pathname.startsWith("/api/v1/") &&
+  !/^\/api\/v1\/(?:me$|auth\/)/.test(u.pathname)
+
 const failApi = (page: Page, status: 500 | 404) =>
-  page.route(
-    (u) =>
-      u.pathname.startsWith("/api/") && !/^\/api\/(me|mock)/.test(u.pathname),
-    (route) =>
-      route.fulfill({
-        status,
-        contentType: "application/json",
-        body: JSON.stringify({
-          code: status === 404 ? "not_found" : "server_error",
-          message: "injected",
-        }),
-      })
+  page.route(isDataApi, (route) =>
+    route.fulfill({
+      status,
+      contentType: "application/json",
+      body: JSON.stringify({
+        code: status === 404 ? "not_found" : "server_error",
+      }),
+    })
   )
+
+const delayApi = (page: Page, ms: number) =>
+  page.route(isDataApi, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, ms))
+    await route.continue()
+  })
 
 for (const family of families) {
   const dashboardFamily = family.paths.some((p) =>
@@ -123,10 +130,9 @@ for (const family of families) {
   )
   test.describe(family.name, () => {
     test.beforeEach(async ({ context, baseURL }) => {
+      await resetLimits()
       if (family.role !== "anon")
-        await context.addCookies([
-          { name: "sy_session", value: sessions[family.role], url: baseURL },
-        ])
+        await context.addCookies(await roleCookies(family.role, baseURL!))
     })
 
     for (const locale of locales)
@@ -136,11 +142,11 @@ for (const family of families) {
         for (const mode of ["500", "404"] as const)
           test(`${mode} ${url}`, async ({ page, baseURL }) => {
             const errors = watch(page)
-            if (dashboardFamily) await failApi(page, Number(mode) as 500 | 404)
-            else
+            await failApi(page, Number(mode) as 500 | 404)
+            if (!dashboardFamily)
               await page
                 .context()
-                .addCookies([{ name: "mock_fail", value: mode, url: baseURL }])
+                .addCookies([{ name: "test_fail", value: mode, url: baseURL }])
             await page.goto(url, { waitUntil: "load" })
             const retryBtn = page.getByRole("button", { name: retry[locale] })
             const heading = page.getByRole("heading", { level: 1 })
@@ -154,8 +160,9 @@ for (const family of families) {
             expect(await blank(page), "page is blank").toBe(false)
             if (mode === "404" || (await retryBtn.count()) === 0) return
             // Retry brings the page back once the failure is gone.
-            if (dashboardFamily) await page.unroute(() => true)
-            else await page.context().clearCookies({ name: "mock_fail" })
+            await page.unrouteAll()
+            if (!dashboardFamily)
+              await page.context().clearCookies({ name: "test_fail" })
             // The server-rendered button can be clicked a moment before hydration attaches its handler, so click again until it works.
             await expect(async () => {
               if ((await retryBtn.count()) > 0) await retryBtn.first().click()
@@ -190,9 +197,13 @@ for (const family of families) {
 
         test(`latency 2 s ${url}`, async ({ page, baseURL }) => {
           const errors = watch(page)
-          await page
-            .context()
-            .addCookies([{ name: "mock_latency", value: "2000", url: baseURL }])
+          await delayApi(page, 2000)
+          if (!dashboardFamily)
+            await page
+              .context()
+              .addCookies([
+                { name: "test_latency", value: "2000", url: baseURL },
+              ])
           await page.goto(url, { waitUntil: "load" })
           await expect(
             page.getByRole("heading", { level: 1 }).first()

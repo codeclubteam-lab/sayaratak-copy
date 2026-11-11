@@ -1,5 +1,6 @@
 import { formatDate, formatNumber } from "@/lib/format"
 import { useT } from "@/lib/i18n/use-t"
+import { mediaSrc } from "@/lib/media"
 import { useNow } from "@/lib/now"
 import type { DataColumn } from "@/lib/table"
 import type { Banner } from "@sayaratak/shared/schemas/admin"
@@ -22,7 +23,7 @@ export function useBannerColumns(handlers: {
       cell: ({ row: { original: b } }) => (
         <span className="flex items-center gap-3">
           <img
-            src={b.imageUrl[locale]}
+            src={mediaSrc(b.imageUrl[locale], 320)}
             width={64}
             height={40}
             alt=""

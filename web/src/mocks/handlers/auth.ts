@@ -52,7 +52,7 @@ function sendCode(key: string, signup?: EmailCode["signup"]) {
     fails: 0,
     signup,
   })
-  return codeSentSchema.parse({ ok: true, demoCode: code })
+  return codeSentSchema.parse({ ok: true })
 }
 // A code works once. Five wrong tries or ten minutes and it is gone; the person asks for a new one.
 function checkCode(key: string, code: string) {

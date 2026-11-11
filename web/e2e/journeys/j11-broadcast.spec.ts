@@ -38,7 +38,7 @@ test("J11 broadcast to dealerships in one city reaches only them, in their langu
   await form.getByRole("button", { name: t("admin.broadcast_send") }).click()
   const sent = admin.waitForResponse(
     (r) =>
-      r.url().includes("/api/admin/broadcasts") &&
+      r.url().includes("/api/v1/admin/broadcasts") &&
       r.request().method() === "POST"
   )
   await admin
@@ -49,7 +49,10 @@ test("J11 broadcast to dealerships in one city reaches only them, in their langu
   // The bells ring in the background; the history follows the broadcast until it says Sent.
   await expect(
     admin
-      .getByRole("table")
+      .getByRole("region", { name: t("admin.broadcast_history") })
+      .locator("tr, article")
+      .filter({ hasText: title[lang] })
+      .locator("visible=true")
       .getByText(t("admin.broadcast_status_sent"), { exact: true })
   ).toBeVisible({ timeout: 15_000 })
 

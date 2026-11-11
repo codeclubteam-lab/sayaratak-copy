@@ -1,6 +1,8 @@
 // Shared helpers of `bun run seo:check` (scripts/check-seo.ts, scripts/check-seo-policy.ts).
 import process from "node:process"
 
+import { apiBase } from "../e2e/auth"
+
 export const base = (
   process.argv[2] ??
   process.env.SEO_ORIGIN ??
@@ -15,14 +17,39 @@ export const check = (ok: boolean, what: string) => {
     console.log(`FAIL ${what}`)
   }
 }
-// `as` signs in a mock role: the session cookie holds a seed user id (src/mocks/db.ts).
-export const get = (path: string, init: RequestInit & { as?: string } = {}) =>
-  fetch(base + path, {
-    ...init,
-    headers: init.as ? { cookie: `sy_session=${init.as}` } : undefined,
+
+export const get = (
+  path: string,
+  init: RequestInit & { cookie?: string } = {}
+) => {
+  const { cookie, headers, ...rest } = init
+  return fetch(base + path, {
+    ...rest,
+    headers: cookie ? { ...headers, cookie } : headers,
   })
-export const getJson = async <T>(path: string, as?: string) =>
-  (await (await get(path, { as })).json()) as T
+}
+
+export const apiRequest = (
+  path: string,
+  init: RequestInit & { cookie?: string } = {}
+) => {
+  const { cookie, headers, ...rest } = init
+  return fetch(`${apiBase}/api/v1${path}`, {
+    ...rest,
+    headers: {
+      ...(rest.body ? { "content-type": "application/json" } : {}),
+      origin: base,
+      ...(cookie ? { cookie } : {}),
+      ...headers,
+    },
+  })
+}
+
+export const getApiJson = async <T>(path: string, cookie?: string) => {
+  const res = await apiRequest(path, { cookie })
+  if (!res.ok) throw new Error(`GET /api/v1${path} failed: ${res.status}`)
+  return (await res.json()) as T
+}
 
 export const unescape = (s: string) =>
   s

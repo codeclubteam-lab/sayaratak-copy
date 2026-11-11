@@ -2,6 +2,7 @@ import { env } from "~/env"
 import { db } from "~/shared/db/client"
 import type { Executor } from "~/shared/db/tx"
 import {
+  IMAGE_WIDTHS,
   imageTemplate,
   pickWidth,
   videoUrl,
@@ -48,16 +49,27 @@ export async function uploadUrl(ex: Executor, id: string | null) {
   return row ? toUrl(row) : undefined
 }
 
+const WIDTH_VARIANTS = [WIDTH_SLOT, ...IMAGE_WIDTHS] as const
+
+function cloudinaryIdFromUrl(url: string) {
+  const base = imageTemplate(files.cloudName, "")
+  for (const width of WIDTH_VARIANTS) {
+    const prefix = base.replace(WIDTH_SLOT, String(width))
+    if (url.startsWith(prefix)) return url.slice(prefix.length)
+  }
+  return undefined
+}
+
 /** The user's own image upload behind an address the web sends back (an avatar). */
 export function getOwnImageId(
   ex: Executor,
   image: { ownerUserId: string; url: string }
 ) {
-  const prefix = imageTemplate(files.cloudName, "")
-  if (!image.url.startsWith(prefix)) return q.getImageIdByUrl(ex, image)
+  const cloudinaryId = cloudinaryIdFromUrl(image.url)
+  if (cloudinaryId === undefined) return q.getImageIdByUrl(ex, image)
   return q.getImageIdByCloudinaryId(ex, {
     ownerUserId: image.ownerUserId,
-    cloudinaryId: image.url.slice(prefix.length),
+    cloudinaryId,
   })
 }
 

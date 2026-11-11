@@ -1,10 +1,13 @@
 // The A6 indexation policy against a running server (step 14.7): noindex listing states, slug redirects, filtered and preset searches, and the server-rendered listing body.
 import { formatNumber } from "@/lib/format"
+import { signInHeader } from "../e2e/auth"
 import {
+  apiRequest,
+  base,
   canonicalOf,
   check,
   get,
-  getJson,
+  getApiJson,
   pathOf,
   robotsOf,
   tagsOf,
@@ -17,27 +20,28 @@ type Row = {
   price: number
   description: { ar: string; en: string }
 }
-const admin = "u-admin"
-const one = async (query: string) =>
-  (
-    await getJson<{ items: Row[] }>(
-      `/api/admin/listings?${query}&pageSize=1`,
-      admin
-    )
-  ).items[0]
-const noindexed = async (path: string, as?: string) => {
-  const res = await get(path, { as })
-  check(
-    res.status === 200,
-    `${path} status ${res.status}${as ? ` as ${as}` : ""}`
-  )
-  check(
-    robotsOf(tagsOf(await res.text())) === "noindex, follow",
-    `${path} lacks noindex, follow`
-  )
-}
 
 export async function checkPolicy(locs: string[]) {
+  const admin = await signInHeader("admin", base)
+  const one = async (query: string) =>
+    (
+      await getApiJson<{ items: Row[] }>(
+        `/admin/listings?${query}&pageSize=1`,
+        admin
+      )
+    ).items[0]
+  const noindexed = async (path: string, cookie?: string) => {
+    const res = await get(path, { cookie })
+    check(
+      res.status === 200,
+      `${path} status ${res.status}${cookie ? " as admin" : ""}`
+    )
+    check(
+      robotsOf(tagsOf(await res.text())) === "noindex, follow",
+      `${path} lacks noindex, follow`
+    )
+  }
+
   // Sold, rented and reserved stay public but out of the index and the sitemap.
   for (const status of ["sold", "rented", "reserved"]) {
     const row = await one(`moderation=approved&status=${status}`)
@@ -59,19 +63,20 @@ export async function checkPolicy(locs: string[]) {
     check(!!row, `no ${state} listing in the seed`)
     if (row) await hidden(row, state)
   }
-  // The seed has no removed listing: remove one for the check and put it back with a plain patch (no notification).
+  // The seed has no removed listing: remove one for the check and restore it.
   const live = (await one("moderation=approved&status=available"))!
-  const moderate = (moderation: string) =>
-    get(`/api/admin/listings/${live.id}`, {
-      as: admin,
-      method: "PATCH",
-      body: JSON.stringify({ moderation }),
+  const moderate = async (action: "remove" | "restore") => {
+    const res = await apiRequest(`/admin/listings/${live.id}/${action}`, {
+      cookie: admin,
+      method: "POST",
     })
-  await moderate("removed")
+    check(res.ok, `${action} ${live.id} status ${res.status}`)
+  }
+  await moderate("remove")
   try {
     await hidden(live, "removed")
   } finally {
-    await moderate("approved")
+    await moderate("restore")
   }
 
   // Wrong words in a slug (Latin or Arabic) redirect to the canonical slug.

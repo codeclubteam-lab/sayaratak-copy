@@ -1,3 +1,4 @@
+import { apiBase } from "../auth"
 import { expect, pick, test, visit } from "./fixtures"
 import type { Locator, Page } from "@playwright/test"
 
@@ -18,7 +19,7 @@ test("J12 a banner shows only in its window and placement and counts clicks", as
     scope.getByRole("textbox", { name: label, exact: true }).fill(value)
   const banners = async () =>
     (await (
-      await admin.request.get("/api/admin/banners")
+      await admin.request.get(`${apiBase}/api/v1/admin/banners`)
     ).json()) as Array<Banner>
   const ours = async () => (await banners()).find((b) => b.title === name)
 
@@ -69,7 +70,7 @@ test("J12 a banner shows only in its window and placement and counts clicks", as
   // A click is counted and opens the link.
   const before = (await ours())!.clicks
   const counted = visitor.waitForResponse((r) =>
-    r.url().endsWith("/api/events")
+    r.url().endsWith("/api/v1/events")
   )
   await shown(visitor).click()
   await counted

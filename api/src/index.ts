@@ -11,6 +11,8 @@ import { closeTransport, verifyTransport } from "~/shared/mail/transport"
 
 const server = Bun.serve({
   port: env.PORT,
+  // Default 10s drops slow requests such as test DB resets or large uploads under load.
+  idleTimeout: 120,
   fetch: app.fetch,
 })
 

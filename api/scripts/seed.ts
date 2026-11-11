@@ -14,8 +14,8 @@ import { buildSeed } from "../../web/src/mocks/seed"
  * Writes the demo data from the mock's own `buildSeed()`, so ids and demo
  * accounts match the mock (A13). Each Phase 2 step adds its tables here.
  */
-export async function seed(ex: Executor) {
-  const data = buildSeed()
+export async function seed(ex: Executor, options: { empty?: boolean } = {}) {
+  const data = buildSeed(options)
   await seedTaxonomy(ex, data)
   await seedPlans(ex, data)
   await seedPeople(ex, data)

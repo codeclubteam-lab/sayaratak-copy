@@ -61,6 +61,29 @@ describe("POST /admin/banners", () => {
     expect(row?.imageArUploadId).not.toBe(row?.imageEnUploadId)
   })
 
+  test("accepts an uploaded picture with {w} replaced by 1280 and keeps it on patch", async () => {
+    const template = await uploadPicture(admin)
+    const sized = template.replace("{w}", "1280")
+    const made = await expectSchema(
+      await call(
+        "POST",
+        "/admin/banners",
+        bannerBody({ ar: sized, en: sized })
+      ),
+      bannerSchema
+    )
+    expect(made.imageUrl).toEqual({ ar: template, en: template })
+    const patched = await expectSchema(
+      await call("PATCH", `/admin/banners/${made.id}`, {
+        title: "Updated offers",
+        imageUrl: { ar: sized, en: sized },
+      }),
+      bannerSchema
+    )
+    expect(patched.title).toBe("Updated offers")
+    expect(patched.imageUrl).toEqual({ ar: template, en: template })
+  })
+
   test("answers 422 for a picture that is not the admin's upload, and for bad dates", async () => {
     const body = await newBanner()
     const alien = await call("POST", "/admin/banners", {

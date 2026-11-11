@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { buttonVariants } from "@/components/ui/button"
 import { formatDate, formatNumber } from "@/lib/format"
 import { useT } from "@/lib/i18n/use-t"
+import { mediaSrc, mediaSrcSet } from "@/lib/media"
 import { useNow } from "@/lib/now"
 import { dashboardPath } from "@/lib/navigation"
 import type { Campaign } from "@sayaratak/shared/schemas/ads"
@@ -25,7 +26,9 @@ export function CampaignCard({
   return (
     <article className="flex flex-col gap-4 rounded-xl bg-card p-5 md:flex-row">
       <img
-        src={c.creative.imageUrl}
+        src={mediaSrc(c.creative.imageUrl, 640)}
+        srcSet={mediaSrcSet(c.creative.imageUrl, 1280)}
+        sizes="(min-width: 768px) 160px, 100vw"
         width={640}
         height={480}
         alt=""

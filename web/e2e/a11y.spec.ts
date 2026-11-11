@@ -1,7 +1,8 @@
 import AxeBuilder from "@axe-core/playwright"
 import { expect, test } from "@playwright/test"
 
-import { routesFor, sessions } from "./routes"
+import { resetLimits, roleCookies } from "./auth"
+import { routesFor } from "./routes"
 import type { Role } from "./routes"
 
 // axe on every route each role may open, both languages and widths (14.4), plus one h1 and one main landmark per page.
@@ -18,12 +19,11 @@ const widths = [390, 1280] as const
 
 for (const role of roles) {
   test.describe(role, () => {
-    if (role !== "anon")
-      test.beforeEach(async ({ context, baseURL }) => {
-        await context.addCookies([
-          { name: "sy_session", value: sessions[role], url: baseURL },
-        ])
-      })
+    test.beforeEach(async ({ context, baseURL }) => {
+      await resetLimits()
+      if (role !== "anon")
+        await context.addCookies(await roleCookies(role, baseURL!))
+    })
 
     for (const locale of locales)
       for (const width of widths)

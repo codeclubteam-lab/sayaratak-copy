@@ -1,6 +1,7 @@
 import { ArrowRightIcon } from "lucide-react"
 
 import { useT } from "@/lib/i18n/use-t"
+import { mediaSrc, mediaSrcSet } from "@/lib/media"
 import { cn } from "@/lib/utils"
 import type { Banner } from "@sayaratak/shared/schemas/admin"
 import { Badge } from "@/components/ui/badge"
@@ -25,7 +26,9 @@ function Photo({
       )}
     >
       <img
-        src={src}
+        src={mediaSrc(src, 960)}
+        srcSet={mediaSrcSet(src, 1280)}
+        sizes="(min-width: 768px) 30vw, 72px"
         width={1200}
         height={900}
         alt=""

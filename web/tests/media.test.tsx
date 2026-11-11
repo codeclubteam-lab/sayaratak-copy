@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { fireEvent, screen, waitFor, within } from "@testing-library/react"
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ApiError } from "@/lib/api/client"
@@ -163,6 +163,41 @@ describe("ImageUploader", () => {
     pick(container, photo())
     expect(await screen.findByText(/1 of 20/)).toBeTruthy()
     expect(screen.getByAltText("Photo 1")).toBeTruthy()
+  })
+  it("keeps every photo when concurrent uploads finish while parent updates lag", async () => {
+    const settle: Array<() => void> = []
+    vi.mocked(uploadMedia).mockImplementation(
+      (_form, onProgress) =>
+        new Promise<Media>((resolve) => {
+          const index = settle.length
+          onProgress(50)
+          settle.push(() => resolve(media(`c${index}`)))
+        })
+    )
+    function DelayedHarness() {
+      const [value, setValue] = useState<Media[]>([])
+      return (
+        <ImageUploader
+          mode="multi"
+          min={3}
+          max={20}
+          label="Photos"
+          value={value}
+          onChange={(next) => queueMicrotask(() => setValue(next))}
+        />
+      )
+    }
+    const { container } = await renderShell(<DelayedHarness />)
+    await screen.findByText(/0 of 20/)
+    pick(container, photo("1.jpg"), photo("2.jpg"), photo("3.jpg"))
+    await waitFor(() => expect(settle).toHaveLength(3))
+    await act(async () => {
+      settle[2]!()
+      settle[0]!()
+      await Promise.resolve()
+      settle[1]!()
+    })
+    expect(await screen.findByText(/3 of 20/)).toBeTruthy()
   })
   it("lets a failed upload be retried without processing the file again", async () => {
     vi.mocked(uploadMedia)

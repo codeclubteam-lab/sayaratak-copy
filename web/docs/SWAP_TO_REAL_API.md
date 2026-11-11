@@ -19,7 +19,7 @@ During server rendering `apiFetch` forwards the visitor's `cookie` header (`src/
 
 Keep the app and the API under one parent site (`example.sd` and `api.example.sd`) so the session cookie stays first-party across server rendering and browser calls with `SameSite=Lax`.
 
-- Session cookies: prefix `sy` (`sy.session_token`, or `__Secure-sy.session_token` over HTTPS), `HttpOnly`, `SameSite=Lax`, `Path=/`, with `Secure` and `crossSubDomainCookies` (`Domain=.<COOKIE_DOMAIN>`) enabled when `APP_ENV=production`. Cookie caching is off so revocations and bans apply immediately.
+- Session cookies: prefix `sy` (`sy.session_token`, or `__Secure-sy.session_token` over HTTPS), `HttpOnly`, `SameSite=Lax`, `Path=/`, with `Secure` enabled when `APP_ENV=production` and `crossSubDomainCookies` (`Domain=.<COOKIE_DOMAIN>`) enabled whenever `COOKIE_DOMAIN` is set. Cookie caching is off so revocations and bans apply immediately.
 - CORS on the API: `Access-Control-Allow-Origin` set to the exact `WEB_ORIGIN` (never `*`), `Access-Control-Allow-Credentials: true`, allowed methods `GET, POST, PATCH, PUT, DELETE`, allowed header `content-type` (plus `authorization`, `idempotency-key`, `x-platform`, `x-app-version` for mobile clients). Answer preflight `OPTIONS`.
 - CSRF: the API `csrfOrigin` middleware checks `Origin` matches `WEB_ORIGIN` on non-GET/HEAD/OPTIONS requests carrying the session cookie (`Origin` may be absent only on cookieless bearer calls). Better-Auth checks `trustedOrigins` (plus Apple form POST origin when Sign in with Apple is enabled).
 
@@ -50,7 +50,7 @@ The mock's `/auth/*` contract is replaced by Better-Auth (`1.7.10`) mounted at `
 4. Sign-up sets `requireEmailVerification: true` (unfinished unverified credential accounts are deleted on retry and pruned after 24 hours by a background job).
 5. Admin accounts have `twoFactor` enabled via emailed OTP (`trustDevice: false`; `/api/v1/admin/*` refuses bearer tokens and admin sessions before second-step verification).
 6. Better-Auth error codes are mapped in `src/lib/api/auth-error.ts` to the shared i18n keys; bans return 403 `banned`.
-7. Mock-only UI (`mock-oauth-dialog.tsx`, on-screen `demoCode`, `DemoTools`, `/mock/*` dev-panel buttons, backup restore UI) was removed in Step 11.2; backup restores show a copyable backup ID and CLI note (`bun run db:restore <id>`). `codeSentSchema.demoCode` and mock auth retirement finish in Step 11.5.
+7. Mock-only UI (`mock-oauth-dialog.tsx`, on-screen `demoCode`, `DemoTools`, `/mock/*` dev-panel buttons, backup restore UI) was removed in Step 11.2; backup restores show a copyable backup ID and CLI note (`bun run db:restore <id>`). `codeSentSchema.demoCode` was retired in Step 11.5 (offline unit tests continue using `tests/mock-fetch.ts`).
 
 Phone OTP (`VITE_FEATURE_OTP`) stays off until SMS delivery exists.
 
@@ -72,5 +72,5 @@ Done in Step 11.3:
 ## 7. Check the swap
 
 1. `bun run --cwd web typecheck && bun run --cwd web lint && bun run --cwd web build && bun run --cwd web size`.
-2. In Step 11.5, run the Playwright suites (`test:e2e`, `test:states`, `test:journeys`) and `seo:check` against the seeded API (plus a shared-parent-domain proxy test to confirm cookie forwarding during SSR).
+2. Step 11.5 runs the Playwright suites (`test:e2e`, `test:states`, `test:journeys`) and `seo:check` against the seeded test-mode API (plus an `app.localtest.me` / `api.localtest.me` reverse-proxy check confirming shared-domain cookie forwarding during SSR).
 3. Verify sign up, login, admin 2FA code, forgot password, social OAuth redirect, post wizard upload after sign-in, Bankak receipt review, and backups CLI copy in both Arabic and English.

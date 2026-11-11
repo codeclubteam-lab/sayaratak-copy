@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test"
 
-import { routesFor, sessions } from "./routes"
+import { apiBase, resetLimits, roleCookies } from "./auth"
+import { routesFor } from "./routes"
 import type { Role } from "./routes"
 
 // Every route each role may open, in both languages and at both widths (14.1).
@@ -40,12 +41,11 @@ const inspect = (width: number) => {
 
 for (const role of roles) {
   test.describe(role, () => {
-    if (role !== "anon")
-      test.beforeEach(async ({ context, baseURL }) => {
-        await context.addCookies([
-          { name: "sy_session", value: sessions[role], url: baseURL },
-        ])
-      })
+    test.beforeEach(async ({ context, baseURL }) => {
+      await resetLimits()
+      if (role !== "anon")
+        await context.addCookies(await roleCookies(role, baseURL!))
+    })
 
     for (const locale of locales)
       for (const width of widths)
@@ -61,7 +61,8 @@ for (const role of roles) {
             page.on("response", (r) => {
               if (
                 r.status() >= 400 &&
-                r.url().startsWith(baseURL ?? "") &&
+                (r.url().startsWith(baseURL ?? "") ||
+                  r.url().startsWith(apiBase)) &&
                 !missingPhoto.test(r.url())
               )
                 errors.push(`${r.status()} ${r.url()}`)

@@ -33,13 +33,13 @@ export async function resolveImage(
 // Marks new pictures attached, so the orphan cleanup leaves them alone.
 export async function attachImages(
   tx: Transaction,
-  attach: { admin: string; ids: string[] }
+  attach: { admin: string; ids: string[]; kept?: string[] }
 ) {
   if (attach.ids.length === 0) return
   await attachMedia(tx, {
     ownerUserId: attach.admin,
     ids: uniqueIds(attach.ids),
-    kept: [],
+    kept: attach.kept ?? [],
     field: "imageUrl",
     imagesOnly: true,
   })
@@ -59,17 +59,19 @@ export async function replaceImages(
     const column = IMAGE_COLUMNS[language]
     const url = find.imageUrl[language]
     if ((await uploadUrl(tx, find.row[column])) === url) continue
-    columns[column] = await resolveImage(tx, {
+    const id = await resolveImage(tx, {
       admin: find.admin,
       url,
       language,
     })
+    if (id !== find.row[column]) columns[column] = id
   }
   await attachImages(tx, {
     admin: find.admin,
     ids: LANGUAGES.flatMap(
       (language) => columns[IMAGE_COLUMNS[language]] ?? []
     ),
+    kept: uniqueIds(imageIdsOf(find.row)),
   })
   const kept = new Set(
     LANGUAGES.map(
