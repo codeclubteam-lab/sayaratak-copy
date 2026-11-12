@@ -122,12 +122,9 @@ describe("POST /admin/businesses/:id/assign-plan", () => {
   })
 
   test("two admins assigning together leave one active subscription", async () => {
-    const other = adminCaller()
     const both = await Promise.all([
       assign("d-2", { planId: "plan-dealer-growth" }),
-      other("POST", "/admin/businesses/d-2/assign-plan", {
-        planId: "plan-dealer-pro",
-      }),
+      assign("d-2", { planId: "plan-dealer-pro" }),
     ])
     expect(both.map((r) => r.status)).toEqual([200, 200])
     expect(await activeOf("ud-1")).toHaveLength(1)

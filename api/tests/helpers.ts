@@ -56,13 +56,22 @@ const WEB_ORIGIN = "http://localhost:3000"
 
 export type SignedIn = { cookie: string; origin: string; token: string }
 
+let signInQueue: Promise<unknown> = Promise.resolve()
+
 /**
  * Signs in a seeded demo account through Better-Auth (A13) and returns the
  * headers a browser would send next: the session cookie and the web origin.
  * `token` is the same session as a bearer token (A18). The admin also passes
  * the emailed code step (3.7), as the web does.
  */
-export async function signIn(as: DemoAccount) {
+export function signIn(as: DemoAccount): Promise<SignedIn> {
+  // Concurrent sign-ins clear rateLimit globally and overwrite admin OTPs in testInbox.
+  const run = signInQueue.then(() => signInNow(as))
+  signInQueue = run.catch(() => {})
+  return run
+}
+
+async function signInNow(as: DemoAccount): Promise<SignedIn> {
   const email = DEMO_EMAILS[as]
   // Tests sign in far more often than a person, all from 127.0.0.1; the
   // limits themselves are tested where they are set (3.6).

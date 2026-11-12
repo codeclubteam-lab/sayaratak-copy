@@ -122,12 +122,8 @@ describe("POST /admin/payments/:id/approve", () => {
   })
 
   test("two admins approving together start the plan once", async () => {
-    const other = adminCaller()
     const before = (await noticesTo("u-dealer", "payment_approved")).length
-    const both = await Promise.all([
-      approve("pay-2"),
-      other("POST", "/admin/payments/pay-2/approve"),
-    ])
+    const both = await Promise.all([approve("pay-2"), approve("pay-2")])
     expect(both.map((r) => r.status).sort()).toEqual([200, 409])
     expect(await activeOf("u-dealer")).toHaveLength(1)
     expect(await noticesTo("u-dealer", "payment_approved")).toHaveLength(
