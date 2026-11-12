@@ -1,8 +1,21 @@
 import { expect, test } from "bun:test"
 
+const API_DIR = `${import.meta.dir}/..`
+
+const OFF_SCRIPT = `
 import { app } from "~/app"
 
-const API_DIR = `${import.meta.dir}/..`
+const statuses: number[] = []
+for (const [method, path] of [
+  ["POST", "/api/_test/reset"],
+  ["POST", "/api/_test/empty"],
+  ["POST", "/api/_test/reset-limits"],
+  ["GET", "/api/_test/otp?email=user@demo.sy"],
+] as const) {
+  statuses.push((await app.request(path, { method })).status)
+}
+process.stdout.write(JSON.stringify(statuses))
+`
 
 const TEST_SCRIPT = `
 import { app } from "~/app"
@@ -43,16 +56,17 @@ process.stdout.write(JSON.stringify({
 }))
 `
 
-test("/api/_test/* returns 404 when APP_ENV is not test", async () => {
-  for (const [method, path] of [
-    ["POST", "/api/_test/reset"],
-    ["POST", "/api/_test/empty"],
-    ["POST", "/api/_test/reset-limits"],
-    ["GET", "/api/_test/otp?email=user@demo.sy"],
-  ] as const) {
-    const res = await app.request(path, { method })
-    expect(res.status).toBe(404)
-  }
+test("/api/_test/* returns 404 when APP_ENV is not test", () => {
+  const run = Bun.spawnSync(["bun", "--no-env-file", "-e", OFF_SCRIPT], {
+    cwd: API_DIR,
+    env: {
+      ...process.env,
+      NODE_ENV: "test",
+      APP_ENV: "development",
+    },
+  })
+  expect(run.exitCode, run.stderr.toString()).toBe(0)
+  expect(JSON.parse(run.stdout.toString())).toEqual([404, 404, 404, 404])
 })
 
 test("/api/_test/* works only with NODE_ENV=test APP_ENV=test and COOKIE_DOMAIN sets cookie Domain", () => {

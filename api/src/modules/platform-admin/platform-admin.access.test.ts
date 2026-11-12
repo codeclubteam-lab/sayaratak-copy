@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, spyOn, test } from "bun:test"
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  mock,
+  spyOn,
+  test,
+} from "bun:test"
 
 import { env } from "~/env"
 import { testInbox } from "~/shared/mail/send"
@@ -10,6 +18,7 @@ import { ask, INBOX, KEY, platform } from "../../../tests/platform"
 
 beforeEach(resetDb)
 afterEach(() => {
+  mock.restore()
   env.ADMIN_SECRET_KEY = KEY
   env.ADMIN_RECOVERY_EMAIL = INBOX
 })
