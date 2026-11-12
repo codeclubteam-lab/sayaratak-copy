@@ -58,6 +58,80 @@ Write migrations as expand then contract: release one adds the new shape, a late
 the old one. A migration that locks a big table (an index, a column rewrite) is tried first on a
 copy of production data. `scripts/scale-seed.ts` builds a 50,000-listing database for that.
 
+### Free Render readiness repair, 2026-11-12
+
+This is the Task 2 remedy from `docs/superpowers/plans/2026-11-12-render-deployment-repair.md`.
+It is locally verified, not applied live. Only separately approved Task 6 may run it against Render.
+The paid-production setup above does not describe the current free test deployment.
+
+**Diagnosis.** The deployed API commit `0b65e0a` ships 24 migrations through
+`0023_listings_created_index` at `1793780098983`. Task 1 found 23 applied migrations through
+`0022_prune_support` at `1793672535855`, with schema USAGE and migration-table SELECT granted.
+The `listings_created` index was absent. The pending migration contains only:
+
+```sql
+CREATE INDEX "listings_created" ON "listings" USING btree ("created_at" desc,"id");
+```
+
+Use the existing runner, not a new migration, manual journal insert, readiness bypass or role grant.
+It takes the existing advisory lock, applies the pending SQL and records its hash/timestamp in
+`drizzle.__drizzle_migrations`. With `MIGRATE_DATABASE_URL` absent, it does not run `ensureAppRole`.
+This deployment currently uses the Render owner as its API role; the restricted-role launch gate
+remains open and is not part of this repair.
+
+**Before any live command.** Recheck the deployed commit, full shipped journal and live metadata.
+This remedy is scoped to exactly one pending migration, 0023. Stop for review if another migration
+is pending, the index already exists, the configured roles changed or metadata cannot be read.
+Inspect identity, migration count/latest timestamp, privileges and `to_regclass('public.listings_created')`
+with read-only SQL. Do not assume the observations from Task 1 are still current.
+
+Take and verify a PostgreSQL 18 backup, encrypted and stored off-service, before the schema change.
+Restore that backup into an isolated local scratch database and verify schema, row counts and journal
+metadata before rehearsing this migration on it. Task 2's schema-only reproduction is not a live-data
+backup or a production-sized locking test. The exact encryption/storage workflow and backup reference
+must be reviewed in Task 6; an unverified application/R2 backup alone does not satisfy this gate.
+
+This is ordinary `CREATE INDEX`, not `CREATE INDEX CONCURRENTLY`: it blocks writes to `listings`
+while building. Review the restored-copy rehearsal and approve a maintenance window before running
+it live. The migration transaction and advisory lock do not eliminate that write-blocking risk.
+
+**Reviewed migration command, Task 6 only.** From `api/`, load the reviewed external owner
+`DATABASE_URL` with TLS required and the existing auth secret into a protected terminal environment.
+Never paste secrets into commands, chat or logs, and never source/copy the local `.env` over hosted
+configuration. Confirm the target host/database privately against the recorded service inventory.
+Run the same CLI file registered as `bun run db:migrate`, explicitly disabling dotenv loading:
+
+```bash
+(
+  set +x
+  : "${DATABASE_URL:?Load the reviewed external owner URL privately}"
+  : "${BETTER_AUTH_SECRET:?Load the existing auth secret privately}"
+  : "${WEB_ORIGIN:?Load the reviewed website origin}"
+  : "${BETTER_AUTH_URL:?Load the reviewed public auth origin}"
+  export DATABASE_URL BETTER_AUTH_SECRET WEB_ORIGIN BETTER_AUTH_URL
+  export NODE_ENV=production APP_ENV=development
+  unset MIGRATE_DATABASE_URL
+  bun --no-env-file scripts/migrate.ts
+)
+```
+
+These exports affect only the migration subprocess, not Render settings or the deployed auth secret.
+The explicit development mode preserves the approved free-test-deployment decision without weakening
+`prodSchema`. If using a laptop, run this from the reviewed repair checkout; free Render has no shell
+or pre-deploy command. Do not seed/bootstrap/reset the live DB or migrate on application startup.
+
+**Verify and roll back.** Require 24 migration rows/latest `1793780098983`, a valid `listings_created`
+index on `(created_at DESC, id)`, and direct API `/api/health/ready` 200 with all configured checks ok.
+If anything differs, stop and report; do not force a success response or run a destructive retry.
+The change is expand-only: older compatible images can keep the added index, and readiness accepts
+a database newer than the image. Roll back coordinated code/config if needed, leaving this index and
+journal intact. Do not drop the index, delete journal rows or restore over live data as routine rollback.
+
+**Local Task 2 proof.** A fresh local Postgres 18 scratch schema at 0022 returned real readiness 503.
+The existing migration CLI applied 0023 and readiness became 200; a second run left count/latest
+timestamp/index/readiness unchanged. SMTP was off locally. This does not prove live email delivery,
+live load/lock duration, browser sessions or a successful Render cutover.
+
 ## 3. Backups and restore
 
 **What exists.** `auto-backup` runs daily at 02:00 Khartoum (or Fridays only, if the admin chose
