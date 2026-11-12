@@ -16,8 +16,10 @@ Do these once, in order. The owner tasks (accounts, DNS) come from the 11.6 chec
    comment block: paid plans on the API, web and database, `preDeployCommand: bun run db:migrate`,
    `MIGRATE_DATABASE_URL` from the database, `DATABASE_URL` by hand as
    `postgres://sayaratak_app:<password>@<internal host>/sayaratak`, and `APP_ENV=production` with
-   every service key filled in the dashboard (all `sync: false`; production refuses to start with
-   one blank).
+   the required service keys (`COOKIE_DOMAIN`, `GOOGLE_*`, `CLOUDINARY_URL`, `SMTP_*`, `MAIL_FROM`,
+   `R2_*`, `FCM_SERVICE_ACCOUNT`) filled in the dashboard (`sync: false`; production refuses to
+   start if one is blank). `FACEBOOK_*` (2 keys) and `APPLE_*` (5 keys) remain optional as
+   all-or-none groups until configured.
 2. **Migrate.** The pre-deploy command does it on each deploy. For the very first run you can do it
    by hand: `bun run db:migrate`. It creates `sayaratak_app` with the password in `DATABASE_URL`.
 3. **Reference data.** `bun run db:bootstrap` writes taxonomy, plans, promotion prices, ad pages,

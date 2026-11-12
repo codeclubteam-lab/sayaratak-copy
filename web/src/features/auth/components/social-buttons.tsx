@@ -4,6 +4,7 @@ import { useT } from "@/lib/i18n/use-t"
 
 export type Provider = "google" | "facebook"
 
+// Facebook stays hidden until configured (VITE_FEATURE_FACEBOOK="true") so unconfigured deployments never show a broken provider button.
 export function SocialButtons({
   disabled,
   onSelect,
@@ -24,16 +25,18 @@ export function SocialButtons({
         <BrandIcon name="google" />
         {t("auth.continue_google")}
       </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="lg"
-        disabled={disabled}
-        onClick={() => onSelect("facebook")}
-      >
-        <BrandIcon name="facebook" />
-        {t("auth.continue_facebook")}
-      </Button>
+      {import.meta.env.VITE_FEATURE_FACEBOOK === "true" && (
+        <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          disabled={disabled}
+          onClick={() => onSelect("facebook")}
+        >
+          <BrandIcon name="facebook" />
+          {t("auth.continue_facebook")}
+        </Button>
+      )}
     </div>
   )
 }

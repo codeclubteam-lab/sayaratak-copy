@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react"
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RecoveryEmailNotice } from "@/features/auth/components/recovery-email-notice"
 import { SocialSignIn } from "@/features/auth/components/social-sign-in"
@@ -9,10 +9,17 @@ import { authClient } from "./auth-client-fake"
 import { renderShell } from "./shell-render"
 
 beforeEach(resetDb)
+afterEach(() => {
+  vi.unstubAllEnvs()
+})
 
 describe("social redirect", () => {
-  it("returns to the gated page including its filters, not an account picker", async () => {
+  it("returns to the gated page including its filters, and hides Facebook when unconfigured", async () => {
+    vi.stubEnv("VITE_FEATURE_FACEBOOK", "false")
     await renderShell(<SocialSignIn />, { path: "/en/search?q=toyota&page=2" })
+    expect(
+      screen.queryByRole("button", { name: "Continue with Facebook" })
+    ).toBeNull()
     fireEvent.click(
       screen.getByRole("button", { name: "Continue with Google" })
     )
@@ -25,7 +32,8 @@ describe("social redirect", () => {
     expect(url.searchParams.get("redirect")).toBe("/en/search?q=toyota&page=2")
     expect(screen.queryByRole("dialog")).toBeNull()
   })
-  it("preserves a safe page-mode redirect in Arabic", async () => {
+  it("preserves a safe page-mode redirect in Arabic when Facebook is enabled", async () => {
+    vi.stubEnv("VITE_FEATURE_FACEBOOK", "true")
     await renderShell(<SocialSignIn redirect="/ar/post?step=photos" />, {
       locale: "ar",
       path: "/ar/auth/signup",

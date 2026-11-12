@@ -23,7 +23,8 @@ services:
         - packages/shared/**
         - bun.lock
     envVars:
-      # development: the service keys (Google, Cloudinary, SMTP, R2, ...) stay blank. Production needs all.
+      # development: service keys stay blank. Production requires COOKIE_DOMAIN, GOOGLE_*, CLOUDINARY_URL,
+      # SMTP_*, MAIL_FROM, R2_*, FCM_SERVICE_ACCOUNT; FACEBOOK_* and APPLE_* stay optional all-or-none groups.
       - key: APP_ENV
         value: development
       - key: DATABASE_URL
@@ -40,8 +41,9 @@ services:
       # Blank until the two-network check proves which addresses Render's proxy uses (A3, T7).
       - key: TRUSTED_PROXIES
         sync: false
-      # Service keys (A14). Optional while APP_ENV=development (blank = feature off), all required
-      # when APP_ENV=production. sync: false keeps values out of git: fill them in the dashboard.
+      # Service keys (A14). Optional while APP_ENV=development (blank = feature off). When APP_ENV=production,
+      # COOKIE_DOMAIN, GOOGLE_*, CLOUDINARY_URL, SMTP_*, MAIL_FROM, R2_*, FCM_SERVICE_ACCOUNT are required;
+      # FACEBOOK_* (pair) and APPLE_* (5 keys) are each all-or-none optional. sync: false keeps values out of git.
       - key: COOKIE_DOMAIN
         sync: false
       - key: GOOGLE_CLIENT_ID
@@ -121,6 +123,8 @@ services:
         value: "false"
       - key: VITE_FEATURE_OTP
         value: "false"
+      - key: VITE_FEATURE_FACEBOOK
+        value: "false"
 
 databases:
   - name: sayaratak-db
@@ -136,7 +140,8 @@ databases:
 #   3. API service env: MIGRATE_DATABASE_URL from the database's connectionString (fromDatabase),
 #      DATABASE_URL by hand (sync: false) as postgres://sayaratak_app:<password>@<internal host>/sayaratak,
 #      so db:migrate creates the limited app user (src/shared/db/app-role.ts).
-#   4. API service env, all sync: false: APP_ENV=production plus COOKIE_DOMAIN, GOOGLE_*, FACEBOOK_*,
-#      CLOUDINARY_URL, SMTP_*, MAIL_FROM, R2_*, FCM_SERVICE_ACCOUNT, APPLE_*, ADMIN_SECRET_KEY,
-#      ADMIN_RECOVERY_EMAIL (sync: false does not work inside an env group, so they stay here).
+#   4. API service env, all sync: false: APP_ENV=production plus required service keys (COOKIE_DOMAIN,
+#      GOOGLE_*, CLOUDINARY_URL, SMTP_*, MAIL_FROM, R2_*, FCM_SERVICE_ACCOUNT); optional all-or-none
+#      groups FACEBOOK_* (set VITE_FEATURE_FACEBOOK="true" on sayaratak-web when enabled) and APPLE_*;
+#      ADMIN_SECRET_KEY and ADMIN_RECOVERY_EMAIL (sync: false does not work inside an env group).
 #   5. domains: for api and web once T4 gives the hostnames.

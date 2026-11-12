@@ -3,14 +3,11 @@ import { z } from "zod"
 const text = z.string().min(1)
 const semver = z.string().regex(/^\d+\.\d+\.\d+$/)
 
-// Third-party accounts the owner fills in over time (A14). Optional in
-// development and test, required when APP_ENV is production.
+// Third-party accounts required when APP_ENV is production (A14).
 const services = {
   COOKIE_DOMAIN: text,
   GOOGLE_CLIENT_ID: text,
   GOOGLE_CLIENT_SECRET: text,
-  FACEBOOK_CLIENT_ID: text,
-  FACEBOOK_CLIENT_SECRET: text,
   CLOUDINARY_URL: text,
   SMTP_HOST: text,
   SMTP_PORT: z.coerce.number().int().positive(),
@@ -23,12 +20,27 @@ const services = {
   R2_SECRET_ACCESS_KEY: text,
   R2_BUCKET: text,
   FCM_SERVICE_ACCOUNT: text,
+}
+
+// Optional in development, test, and production until configured; each provider enforces an all-or-none group in production.
+const optionalServices = {
+  FACEBOOK_CLIENT_ID: text,
+  FACEBOOK_CLIENT_SECRET: text,
   APPLE_CLIENT_ID: text,
   APPLE_TEAM_ID: text,
   APPLE_KEY_ID: text,
   APPLE_PRIVATE_KEY: text,
   APPLE_APP_BUNDLE_ID: text,
 }
+
+const FACEBOOK_KEYS = ["FACEBOOK_CLIENT_ID", "FACEBOOK_CLIENT_SECRET"] as const
+const APPLE_KEYS = [
+  "APPLE_CLIENT_ID",
+  "APPLE_TEAM_ID",
+  "APPLE_KEY_ID",
+  "APPLE_PRIVATE_KEY",
+  "APPLE_APP_BUNDLE_ID",
+] as const
 
 const core = {
   NODE_ENV: z.enum(["development", "test", "production"]),
@@ -65,10 +77,23 @@ const core = {
   ADMIN_RECOVERY_EMAIL: z.email().optional(),
 }
 
-const devSchema = z.object({ ...core, ...z.object(services).partial().shape })
-const prodSchema = z.object({ ...core, ...services })
+const devSchema = z.object({
+  ...core,
+  ...z.object({ ...services, ...optionalServices }).partial().shape,
+})
 
 export type Env = z.infer<typeof devSchema>
+
+const prodSchema = z
+  .object({
+    ...core,
+    ...services,
+    ...z.object(optionalServices).partial().shape,
+  })
+  .superRefine((data, ctx) => {
+    requireGroup(data, FACEBOOK_KEYS, ctx)
+    requireGroup(data, APPLE_KEYS, ctx)
+  })
 
 // A blank line in .env (`SMTP_HOST=`) counts as not set.
 const source = Object.fromEntries(
@@ -86,3 +111,19 @@ if (!result.success) {
 }
 
 export const env: Env = result.data
+
+function requireGroup(
+  data: Partial<Env>,
+  keys: readonly (keyof Env)[],
+  ctx: z.RefinementCtx
+) {
+  const missing = keys.filter((key) => !data[key])
+  if (missing.length === 0 || missing.length === keys.length) return
+  for (const key of missing) {
+    ctx.addIssue({
+      code: "custom",
+      path: [key],
+      message: "Required when another key in this provider group is set",
+    })
+  }
+}

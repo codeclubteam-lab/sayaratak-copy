@@ -17,8 +17,9 @@ bun run db:seed               # demo data from the web mocks; refuses when APP_E
 bun run dev                   # http://localhost:4000, restarts on change
 ```
 
-Service keys (Google, Cloudinary, SMTP, R2, Firebase, Apple) are optional in development and
-required when `APP_ENV=production`. The full list is in `.env.example`.
+Service keys (`COOKIE_DOMAIN`, Google, Cloudinary, SMTP, R2, Firebase) are optional in development
+and required when `APP_ENV=production`. Facebook (2 keys) and Apple (5 keys) are optional even
+in production, and each requires its full key group when enabled. The full list is in `.env.example`.
 
 App developers: [docs/MOBILE.md](docs/MOBILE.md) has a bearer-token walkthrough for listings,
 uploads, messages and push. Browse the read-only contract at `http://localhost:4000/api/docs`

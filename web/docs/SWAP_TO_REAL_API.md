@@ -52,7 +52,7 @@ The mock's `/auth/*` contract is replaced by Better-Auth (`1.7.10`) mounted at `
 6. Better-Auth error codes are mapped in `src/lib/api/auth-error.ts` to the shared i18n keys; bans return 403 `banned`.
 7. Mock-only UI (`mock-oauth-dialog.tsx`, on-screen `demoCode`, `DemoTools`, `/mock/*` dev-panel buttons, backup restore UI) was removed in Step 11.2; backup restores show a copyable backup ID and CLI note (`bun run db:restore <id>`). `codeSentSchema.demoCode` was retired in Step 11.5 (offline unit tests continue using `tests/mock-fetch.ts`).
 
-Phone OTP (`VITE_FEATURE_OTP`) stays off until SMS delivery exists.
+Phone OTP (`VITE_FEATURE_OTP`) stays off until SMS delivery exists, and Facebook sign-in stays hidden while `VITE_FEATURE_FACEBOOK` is `false`.
 
 ## 5. Remove the mock from the running app
 
@@ -66,7 +66,7 @@ Done in Step 11.3:
 
 ## 6. Turn off demo flags
 
-- Set `VITE_DEMO=false` before building for production to hide `DemoAccounts` on the login form, and keep `VITE_FEATURE_OTP=false`. Rebuild after changing `VITE_*` variables.
+- Set `VITE_DEMO=false` before building for production to hide `DemoAccounts` on the login form, keep `VITE_FEATURE_OTP=false`, and keep `VITE_FEATURE_FACEBOOK=false` until Facebook OAuth credentials exist on the API. Rebuild after changing `VITE_*` variables.
 - The dev panel (`Ctrl+Shift+D`, `Failure`, `Latency`, `Switch account`) mounts only when `import.meta.env.DEV` is true.
 
 ## 7. Check the swap
