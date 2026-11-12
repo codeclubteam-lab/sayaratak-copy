@@ -17,9 +17,8 @@ import * as q from "./uploads.queries"
 
 export type UploadRow = NonNullable<Awaited<ReturnType<typeof q.getUpload>>>
 
-// Private files are streamed by the API, so their address is on the API's own
-// origin: web pages run on another origin of the same site and the session
-// cookie still goes along (SameSite=Lax, A12).
+// Private links use the public auth origin: the website proxy in same-origin
+// deployments, or the API when explicitly configured for shared custom domains.
 const PRIVATE_URL_PREFIX = new URL("/api/v1/uploads/", env.BETTER_AUTH_URL).href
 
 /**

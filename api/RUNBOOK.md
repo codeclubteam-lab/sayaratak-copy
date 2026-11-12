@@ -235,9 +235,10 @@ run it once by hand. A clean pass clears the flag.
   silence), `job_done` and `job_failed` (with `job`), `jobs_started` (at boot), `shutdown_started`
   and `shutdown_done` (a deploy or a stop).
 - **Health checks** are debug lines. To see them set `LOG_LEVEL=debug`, or call a normal route.
-- **`/api/health/live`:** the process is up. Render's health check uses it.
+- **`/api/health/live`:** the process is up. It does not prove database readiness.
 - **`/api/health/ready`:** database, migrations, SMTP, jobs. 200 or 503. Point the uptime monitor
-  here. A 503 names the failing check. `migrations` fails when the database is behind the image
+  here. The repaired Render blueprint also targets this route. A 503 names the failing check.
+  `migrations` fails when the database is behind the image
   (run `db:migrate`); a database ahead of the image is fine.
 - **Slow search:** the scale numbers and the cases that cost the most are in `plan/progress.md`,
   step 10.6. `scripts/scale-explain.ts` reruns them against a `_scale` database.
@@ -252,7 +253,7 @@ For the approved same-origin Render repair, opt in with `CLIENT_IP_MODE=render` 
 Set the same dedicated `PROXY_CLIENT_IP_SECRET` on both, at least 32 characters, stored only in
 server environments. Never reuse the auth/admin secret or put it in a `VITE_` variable. On the API
 also set `API_PUBLIC_ORIGIN=https://sayaratak-api-91a8.onrender.com`, without an API path.
-These are future Task 4/6 configuration steps, not changes already made to hosted settings.
+These are prepared Task 4 instructions for separately approved Task 6, not hosted changes.
 
 [Render documents](https://render.com/articles/host-pocketbase-on-render) that its public ingress
 overwrites `CF-Connecting-IP`. Only explicit Render mode reads that validated single-IP header.
@@ -273,6 +274,77 @@ resolved IPs match each network's platform-observed address, not `::1`, web egre
 Local injected-header tests prove the code only, not Render's deployed overwrite behavior. Do not
 add a public IP/header echo endpoint. Keep signatures and the signing key out of responses/logs.
 On rollback restore coordinated code, mode/origin and key settings together; retain data/indexes.
+
+### Same-origin Render configuration
+
+Task 4 prepares this configuration locally. Do not apply it, push or deploy until Task 6 is
+separately approved after Task 5 acceptance. No new domain, paid plan or email provider is needed.
+Origins have no `/en`, `/ar` or `/api/v1` suffix.
+
+| Service | Variable | Exact target |
+| --- | --- | --- |
+| Web | `API_BASE_URL` | `https://sayaratak-api-91a8.onrender.com` |
+| Web | `VITE_API_BASE_URL` | `https://sayaratak-web.onrender.com` |
+| Web | `APP_ORIGIN` | `https://sayaratak-web.onrender.com` |
+| Web | `IMAGE_ORIGINS` | `https://res.cloudinary.com` |
+| Web | `VITE_DEMO` | `false` |
+| Web | `VITE_FEATURE_OTP` | `false` |
+| Web | `VITE_FEATURE_FACEBOOK` | `false` |
+| Both | `CLIENT_IP_MODE` | `render` |
+| Both | `PROXY_CLIENT_IP_SECRET` | Same privately generated dedicated key, at least 32 characters |
+| API | `API_PUBLIC_ORIGIN` | `https://sayaratak-api-91a8.onrender.com` |
+| API | `WEB_ORIGIN` | `https://sayaratak-web.onrender.com` |
+| API | `BETTER_AUTH_URL` | `https://sayaratak-web.onrender.com` |
+| API | `COOKIE_DOMAIN` | Absent or blank, host-only |
+| API | `APP_ENV` | `development` |
+| API | `SMTP_PORT` | `2525`, preserve the verified managed provider |
+
+Keep `BETTER_AUTH_SECRET`, DB/storage/mail credentials, sender, SMTP host and the provider's
+working `SMTP_SECURE` unchanged. Do not copy local `.env` to Render or print/generate secrets
+into chat/logs. The blueprint keeps secret fields `sync: false`; do not generate a different proxy
+key per service. `TRUSTED_PROXIES` stays blank in Render mode. Keep all three plans free and monitor
+the direct API `/api/health/ready`. Pending migration 0023 still needs the reviewed backup/rehearsal
+and separate Task 6 execution above, not a liveness-only workaround.
+
+The web build and startup require explicit `API_BASE_URL` and `APP_ORIGIN`, different HTTP(S)
+origins. Browser base must be blank, `/`, or match `APP_ORIGIN`, not the upstream. Startup checks
+both runtime and baked browser values against the runtime website origin. Rebuild web after
+`VITE_*` changes. Local HTTP/default socket mode remains available; API `prodSchema` is unchanged.
+The synchronous Nitro `deployment-startup.ts` plugin validates before listening because the
+TanStack server entry is lazy. No invalid setting quietly falls back to localhost in a built server.
+
+HTTPS `BETTER_AUTH_URL` enables Secure cookies even with `APP_ENV=development`. Responses use
+`__Secure-sy.session_token`, HttpOnly, Secure, SameSite=Lax, Path=/ and no Domain for blank
+`COOKIE_DOMAIN`. Never set `COOKIE_DOMAIN=onrender.com`. Explicit custom-domain sharing still
+works when configured. Logout expires the matching names/path/domain. SSR forwards the visitor's
+cookie to the upstream, retaining the same user as browser `/me`. Private upload URLs already
+derive from `BETTER_AUTH_URL`, so use the website and preserve owner/admin-only reads. Cloudinary
+delivery URLs and JSON payloads are not rewritten. Native ID-token/bearer endpoints remain direct.
+
+Google Console target, not yet applied:
+
+- Authorized JavaScript origin: `https://sayaratak-web.onrender.com`.
+- Authorized redirect URI: `https://sayaratak-web.onrender.com/api/v1/auth/callback/google`.
+- The locale callback UI remains `/$locale/auth/callback`, not the provider redirect URI.
+- The owner explicitly deferred the existing Console rollback inventory from Task 4 to Task 6.
+  Before any Task 6 edit, privately record the actual existing origin/callback entries. They
+  have not been inspected here; do not invent an old value. Retain the recorded entries for
+  rollback, including any currently configured direct-API callback. No Console edit in Task 4.
+
+Coordinated cutover/rollback for Task 6:
+
+1. Record previous API/web commits, build/runtime env and actual Google entries privately. Review
+   auto-deploy before pushing. Obtain approval for the exact diff, maintenance and DB command.
+2. Complete the encrypted off-service backup, restore/rehearsal and approved readiness remedy.
+   Update only reviewed env keys, preserving all provider/secrets values. Configure the Google
+   website callback, coordinate both deployments and rebuild web with its target browser origin.
+3. Verify intended commits, direct readiness, both locale pages, same-origin JSON and two-network
+   client-IP/spoofing checks. Real email/signup/Google acceptance remains Task 7.
+4. If cutover fails, stop. Restore both code versions and their coupled public/upstream origins,
+   cookie-domain/IP-mode/key settings, baked VITE values and recorded Google entries together.
+   Rebuild the old web configuration; a runtime-only rollback leaves stale JS. Expect re-login
+   if the cookie name/origin changed. Do not rotate the auth secret, drop the additive index,
+   delete migration rows, restore over or reset live data as rollback.
 
 ### Concurrent code-mail reservations
 

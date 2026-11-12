@@ -6,20 +6,22 @@ The app talks to the API through `apiFetch` (`src/lib/api/client.ts`) and valida
 
 ```bash
 API_BASE_URL=https://api.example.sd        # server-side rendering calls (local default http://localhost:4000)
-VITE_API_BASE_URL=https://api.example.sd   # browser calls, read at build time: rebuild after changing it
+VITE_API_BASE_URL=https://example.sd       # browser calls through the website proxy, baked at build time
 APP_ORIGIN=https://example.sd              # canonical links, sitemap, robots
 IMAGE_ORIGINS=https://res.cloudinary.com   # extra Content-Security-Policy img-src origins
 ```
 
 `buildUrl` appends `/api/v1` to the origin, so the API serves versioned endpoints under `/api/v1` (`https://api.example.sd/api/v1/listings`). Health checks stay under `/api/health/*`.
 
-During server rendering `apiFetch` forwards the visitor's `cookie` header (`src/lib/api/forwarded-cookie.ts`), so the API sees the signed-in user. The mock `x-mock-ssr` header has been dropped from `apiFetch`.
+During server rendering `apiFetch` forwards the visitor's `cookie` header through the server-only `src/lib/api/forwarded-headers.ts`, so the API sees the signed-in user. In Render mode it also signs the validated ingress IP. There is no signing RPC or mock SSR header.
+
+`src/lib/server/deployment-config.ts` validates both origins at production build and server startup. `deployment-startup.ts` is a synchronous Nitro plugin so invalid settings fail before listening, not only when the lazy TanStack entry receives a request. Origins must be explicit HTTP(S) values without credentials, paths, query, fragment or surrounding whitespace, and must differ to prevent proxy recursion. `VITE_API_BASE_URL` must be blank, `/`, or the website origin, never the upstream. Startup validates the baked browser URL against runtime `APP_ORIGIN` too; changing env without rebuilding cannot fix a stale browser bundle. Local development/tests retain localhost defaults. The fixed upstream is not selected from visitor input.
 
 ## 2. Cookies and CORS
 
-Keep the app and the API under one parent site (`example.sd` and `api.example.sd`) so the session cookie stays first-party across server rendering and browser calls with `SameSite=Lax`.
+Browser requests to `/api/v1/*` use the website origin. Its server forwards them to the fixed upstream before TanStack handles HTML; server-rendered requests still call the upstream directly with the incoming cookie. This works on the existing separate Render hostnames without cross-site cookies or a new domain. The native API/bearer contract remains direct.
 
-- Session cookies: prefix `sy` (`sy.session_token`, or `__Secure-sy.session_token` over HTTPS), `HttpOnly`, `SameSite=Lax`, `Path=/`, with `Secure` enabled when `APP_ENV=production` and `crossSubDomainCookies` (`Domain=.<COOKIE_DOMAIN>`) enabled whenever `COOKIE_DOMAIN` is set. Cookie caching is off so revocations and bans apply immediately.
+- Session cookies: prefix `sy` (`sy.session_token`, or `__Secure-sy.session_token` over HTTPS), `HttpOnly`, `SameSite=Lax`, `Path=/`. `Secure` is enabled by HTTPS `BETTER_AUTH_URL` or `APP_ENV=production`. Blank `COOKIE_DOMAIN` means host-only, required for these Render hostnames. Never use `onrender.com`. Explicit shared custom-domain cookie behavior remains available on the API, but this web deployment validator requires same-origin browser transport. Cookie caching is off so revocations and bans apply immediately. Logout expires matching names at the same path/domain.
 - CORS on the API: `Access-Control-Allow-Origin` set to the exact `WEB_ORIGIN` (never `*`), `Access-Control-Allow-Credentials: true`, allowed methods `GET, POST, PATCH, PUT, DELETE`, allowed header `content-type` (plus `authorization`, `idempotency-key`, `x-platform`, `x-app-version` for mobile clients). Answer preflight `OPTIONS`.
 - CSRF: the API `csrfOrigin` middleware checks `Origin` matches `WEB_ORIGIN` on non-GET/HEAD/OPTIONS requests carrying the session cookie (`Origin` may be absent only on cookieless bearer calls). Better-Auth checks `trustedOrigins` (plus Apple form POST origin when Sign in with Apple is enabled).
 
@@ -28,6 +30,7 @@ Keep the app and the API under one parent site (`example.sd` and `api.example.sd
 - Media storage uses **Cloudinary** (not MinIO/S3). Public images receive Cloudinary delivery URLs (`https://res.cloudinary.com/...`) using eager strict transformation `c_limit,f_webp,q_auto,w_{w}` for `{w}` in `320`, `640`, `960`, and `1280`; incoming transforms re-encode and strip EXIF/GPS (2560 px max for images, 1280 px and 2 Mbit/s for videos).
 - `POST /api/v1/uploads` requires a signed-in session (plus idempotency key) and returns a `Media` (`listing:mediaSchema`).
 - Private files (Bankak payment receipts and verification documents) are stored private on Cloudinary and **streamed through the API at `GET /api/v1/uploads/:id`** after an owner-or-admin session check (`Cache-Control: private, no-store`, `X-Content-Type-Options: nosniff`, sandboxed CSP; `404` for anyone else). Seeded demo assets stay under `api/demo` (`dev`/`test` only).
+- Generated private-file links use `BETTER_AUTH_URL`, therefore point to the website proxy in this deployment. Public Cloudinary delivery URLs remain unchanged; the proxy does not rewrite JSON or URLs.
 - Web CSP (`src/lib/csp.ts`, used by `src/server.ts`) allows `https://res.cloudinary.com` in both `img-src` and `media-src` alongside `IMAGE_ORIGINS`, and includes the browser API origin (`VITE_API_BASE_URL`) in `connect-src`, `img-src`, and `media-src` so streamed private files and redirects load cleanly.
 
 ## 4. Authentication with Better-Auth
@@ -74,3 +77,15 @@ Done in Step 11.3:
 1. `bun run --cwd web typecheck && bun run --cwd web lint && bun run --cwd web build && bun run --cwd web size`.
 2. Step 11.5 runs the Playwright suites (`test:e2e`, `test:states`, `test:journeys`) and `seo:check` against the seeded test-mode API (plus an `app.localtest.me` / `api.localtest.me` reverse-proxy check confirming shared-domain cookie forwarding during SSR).
 3. Verify sign up, login, admin 2FA code, forgot password, social OAuth redirect, post wizard upload after sign-in, Bankak receipt review, and backups CLI copy in both Arabic and English.
+
+## 8. Existing free Render deployment
+
+Use the exact service-variable table, Google callback and coordinated rollback in [the API runbook](../../api/RUNBOOK.md#same-origin-render-configuration). These are prepared instructions only until separately approved Task 6. Keep `APP_ENV=development`, both services/database free, managed SMTP on 2525 and all existing secrets/provider settings unchanged. Tasks 5-7 own the full browser/HTTPS/local and live acceptance, not these configuration tests.
+
+Manual browser walkthrough after Task 5's isolated servers are approved:
+
+1. Open `/en` and `/ar`; check LTR/RTL and Network requests to website `/api/v1/site`, `/taxonomy` and `/me`, not the upstream. Signed-out `/me` is JSON `null`.
+2. Sign in using local test credentials only, reload and switch locale. `/me` and the rendered account should identify the same user.
+3. Under local trusted HTTPS, inspect the cookie in browser storage: `__Secure-sy.session_token`, host-only, HttpOnly, Secure, Lax, `/`. Sign out, reload and confirm it expires and the account is signed out.
+4. Open a local private receipt as its owner/admin, then as another user. Only owner/admin succeeds; others receive 404. Public Cloudinary URLs stay unchanged.
+5. Do not run reset/OTP helpers against Render or claim these steps passed without the Task 5 browser evidence. Real Google/email and free-tier wake-up remain live-gated.

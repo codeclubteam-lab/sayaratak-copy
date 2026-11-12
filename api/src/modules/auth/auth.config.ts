@@ -108,7 +108,8 @@ export const auth = betterAuth({
   },
   advanced: {
     cookiePrefix: "sy",
-    useSecureCookies: isProduction,
+    useSecureCookies:
+      isProduction || new URL(env.BETTER_AUTH_URL).protocol === "https:",
     defaultCookieAttributes: { sameSite: "lax", httpOnly: true },
     crossSubDomainCookies: {
       enabled: Boolean(env.COOKIE_DOMAIN),

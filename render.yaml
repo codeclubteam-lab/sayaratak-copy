@@ -16,7 +16,7 @@ services:
     dockerContext: .
     region: frankfurt
     plan: free
-    healthCheckPath: /api/health/live
+    healthCheckPath: /api/health/ready
     buildFilter:
       paths:
         - api/**
@@ -33,17 +33,25 @@ services:
           property: connectionString
       - key: BETTER_AUTH_SECRET
         generateValue: true
-      # This service's public address, and the web app's origin.
+      # Public authentication belongs to the website proxy, not the direct API address.
       - key: BETTER_AUTH_URL
-        sync: false
+        value: https://sayaratak-web.onrender.com
       - key: WEB_ORIGIN
+        value: https://sayaratak-web.onrender.com
+      - key: CLIENT_IP_MODE
+        value: render
+      - key: API_PUBLIC_ORIGIN
+        value: https://sayaratak-api-91a8.onrender.com
+      # Same dedicated server-only key on BOTH services; never generate independent keys here.
+      - key: PROXY_CLIENT_IP_SECRET
         sync: false
-      # Blank until the two-network check proves which addresses Render's proxy uses (A3, T7).
+      # Keep blank in Render mode; regional outbound ranges do not identify this website.
       - key: TRUSTED_PROXIES
         sync: false
       # Service keys (A14). Optional while APP_ENV=development (blank = feature off). When APP_ENV=production,
       # COOKIE_DOMAIN, GOOGLE_*, CLOUDINARY_URL, SMTP_*, MAIL_FROM, R2_*, FCM_SERVICE_ACCOUNT are required;
       # FACEBOOK_* (pair) and APPLE_* (5 keys) are each all-or-none optional. sync: false keeps values out of git.
+      # Keep absent/blank for these Render hostnames. Never set onrender.com.
       - key: COOKIE_DOMAIN
         sync: false
       - key: GOOGLE_CLIENT_ID
@@ -109,13 +117,16 @@ services:
     envVars:
       - key: BUN_VERSION
         value: 1.4.2
-      # Set both to the public API origin (e.g. https://api.example.sd).
-      # VITE_API_BASE_URL is read at Vite build time: rebuild/redeploy after changing it.
+      # SSR/proxy uses the API; browsers use the website. Rebuild after VITE changes.
       - key: API_BASE_URL
-        sync: false
+        value: https://sayaratak-api-91a8.onrender.com
       - key: VITE_API_BASE_URL
-        sync: false
+        value: https://sayaratak-web.onrender.com
       - key: APP_ORIGIN
+        value: https://sayaratak-web.onrender.com
+      - key: CLIENT_IP_MODE
+        value: render
+      - key: PROXY_CLIENT_IP_SECRET
         sync: false
       - key: IMAGE_ORIGINS
         value: https://res.cloudinary.com

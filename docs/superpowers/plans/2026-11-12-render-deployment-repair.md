@@ -32,7 +32,7 @@
 | 6 | Apply the approved repair on Render | New deployment serves both homepages and API readiness passes | Yes, approved settings/deploy and only necessary DB work |
 | 7 | Verify actual signup and login on the live site | Real email verification, persistent login and logout pass | Yes, only agreed test-account actions |
 
-**Current status:** Tasks 1-3 locally complete with their scoped gates; Task 3 includes the separately approved client-IP extension and atomic mail-cap prerequisite. No hosted setting/data/push/deploy change has occurred. Tasks 4-7 remain separately gated. See both progress trackers for commits/evidence; stop after Task 3 and await Task 4 permission.
+**Current status:** Tasks 1-4 locally complete with their scoped gates; Task 3 includes the separately approved client-IP extension and atomic mail-cap prerequisite. Task 4 includes the owner-approved Nitro startup hook and explicit deferral of the actual Google Console rollback inventory to Task 6 before any Console edit. No hosted setting/data/push/deploy change has occurred. Tasks 5-7 remain separately gated. See both progress trackers for commits/evidence; stop after Task 4 and await Task 5 permission.
 
 ## Known evidence, checked earlier on 2026-11-12
 
@@ -319,6 +319,15 @@ it("forwards site requests to the fixed API origin", async () => {
 
 ## Task 4: Align secure sessions and deployment configuration
 
+**Owner-approved startup amendment (2026-11-12):** The built Nitro server lazy-loads
+`web/src/server.ts`, so its module-level validation alone cannot fail before listening.
+Owner selected "Add startup hook (Recommended)". Add
+`web/src/lib/server/deployment-startup.ts`, register the synchronous production-only Nitro
+plugin in `web/vite.config.ts`, and cover it in `web/tests/deployment-startup.test.ts`.
+Reuse `readDeploymentConfig`; bake only the public browser base into the server plugin,
+validate runtime plus baked origins before serving, and prove missing/stale settings fail
+with actual built startup. No new dependency, package start-command change or hosted action.
+
 **Scope:** Local auth/configuration changes and exact deployment instructions. Do not apply them on Render yet.
 
 **Files:** Create `web/src/lib/server/deployment-config.ts`, `web/tests/deployment-config.test.ts`; modify `web/src/server.ts`, `api/src/modules/auth/auth.config.ts`, relevant auth tests, `render.yaml`, env examples, `web/docs/SWAP_TO_REAL_API.md`, `api/RUNBOOK.md`. If a pure policy helper is needed, create `auth.cookie-options.ts` and `auth.cookie-options.test.ts` beside auth.config.
@@ -334,11 +343,11 @@ export declare function readDeploymentConfig(
 
 It validates HTTP(S) origins without credentials, query, fragment or API path. Production server mode requires explicit origins; local development can retain localhost defaults. `apiBaseUrl` and `appOrigin` must differ, preventing proxy recursion. The browser build's `VITE_API_BASE_URL` must be blank/relative or match `APP_ORIGIN` for this mode, never the separate upstream. Build-time values and runtime values must agree.
 
-- [ ] Add failing config tests for missing deployed upstream, origin containing `/api/v1`, same upstream/website origin, wrong browser origin and valid exact Render origins. Verify a production build/start fails with a useful variable name instead of quietly targeting localhost. Local Vitest isolation remains intact.
-- [ ] Add a failing HTTPS cookie-policy test with `APP_ENV=development`. Apply the minimal policy using `isProduction || new URL(env.BETTER_AUTH_URL).protocol === "https:"` for secure cookies. Keep local HTTP tests working; keep SameSite=Lax and HttpOnly. Blank COOKIE_DOMAIN must mean host-only, not an inferred shared Render domain.
-- [ ] Verify actual auth responses, not just the policy expression: secure prefix/attributes on HTTPS, no Domain attribute, all logout deletions use matching cookie names/path. Keep existing shared custom-domain behavior when explicitly configured.
-- [ ] Validate web incoming cookie forwarding during SSR. Confirm `GET /me` and a reload see the same user. Verify private upload URLs already derived from `BETTER_AUTH_URL` point to the website and retain owner/admin authorization. Do not rewrite arbitrary JSON payloads or Cloudinary delivery URLs.
-- [ ] Document these exact target values. No `/en` or `/api/v1` suffix belongs in an origin:
+- [x] Add failing config tests for missing deployed upstream, origin containing `/api/v1`, same upstream/website origin, wrong browser origin and valid exact Render origins. Verify a production build/start fails with a useful variable name instead of quietly targeting localhost. Local Vitest isolation remains intact.
+- [x] Add a failing HTTPS cookie-policy test with `APP_ENV=development`. Apply the minimal policy using `isProduction || new URL(env.BETTER_AUTH_URL).protocol === "https:"` for secure cookies. Keep local HTTP tests working; keep SameSite=Lax and HttpOnly. Blank COOKIE_DOMAIN must mean host-only, not an inferred shared Render domain.
+- [x] Verify actual auth responses, not just the policy expression: secure prefix/attributes on HTTPS, no Domain attribute, all logout deletions use matching cookie names/path. Keep existing shared custom-domain behavior when explicitly configured.
+- [x] Validate web incoming cookie forwarding during SSR. Confirm `GET /me` and a reload see the same user. Verify private upload URLs already derived from `BETTER_AUTH_URL` point to the website and retain owner/admin authorization. Do not rewrite arbitrary JSON payloads or Cloudinary delivery URLs.
+- [x] Document these exact target values. No `/en` or `/api/v1` suffix belongs in an origin:
 
   R3 amendment also requires `CLIENT_IP_MODE=render` on both services, the same privately generated
   `PROXY_CLIENT_IP_SECRET` on both, and API `API_PUBLIC_ORIGIN=https://sayaratak-api-91a8.onrender.com`.
@@ -360,8 +369,19 @@ It validates HTTP(S) origins without credentials, query, fragment or API path. P
 | API | `SMTP_PORT` | `2525`, preserve current verified provider values |
 
   Keep `BETTER_AUTH_SECRET` unchanged. Preserve all SMTP/provider/DB/storage secrets. Do not invent SMTP_SECURE: inspect and retain the provider's working setting. Keep service plan values free. Health monitoring still targets the direct API `/api/health/ready`.
-- [ ] Document the Google callback change to `https://sayaratak-web.onrender.com/api/v1/auth/callback/google`, with website origin `https://sayaratak-web.onrender.com`. Record old callback entries for rollback; do not change Google Console yet. Native ID-token/bearer endpoints remain direct API calls.
-- [ ] Run API/web static gates and focused `auth-client`, `lib-helpers`, deployment-config, proxy, auth session/origin and private-upload tests. Use postgres-test for API tests. Update docs/trackers/graph and commit passing changes as `step 11.6-r4: align secure same-origin deployment`.
+- [x] Document the Google callback change to `https://sayaratak-web.onrender.com/api/v1/auth/callback/google`, with website origin `https://sayaratak-web.onrender.com`. Record old callback entries for rollback; do not change Google Console yet. Native ID-token/bearer endpoints remain direct API calls. **Named deferral approved by owner:** actual old Console entries are not inspected in Task 4; Task 6 must record them privately before any edit.
+- [x] Run API/web static gates and focused `auth-client`, `lib-helpers`, deployment-config, proxy, auth session/origin and private-upload tests. Use postgres-test for API tests. Update docs/trackers/graph and commit passing changes as `step 11.6-r4: align secure same-origin deployment`.
+
+**Local evidence (2026-11-12):** Six API/web static gates pass. Affected API tests pass 149/149
+across 22 files, plus OpenAPI/lint invariants 4/4 across two files; OpenAPI regeneration has zero
+diff. Focused web tests pass 118/118 across eight files. Exact Render-origin production build,
+size budgets and 462-client-JS server/config/key leak scan pass. Real built start rejects missing
+upstream, missing website and stale baked browser origin before listening; build rejects either
+missing server origin before bundling. Built web plus real loopback API proves same SSR `/me`
+identity through reload/locale and revoked identity after proxied logout. Cookie responses and
+private owner/admin/other access pass HTTPS-development, local HTTP and custom-domain cases.
+These are response/manual-header proofs, not Task 5 browser/trusted-TLS acceptance. Test services
+stopped; graph refreshed. Full local suites and actual Render/email/Google/IP proof remain gated.
 
 **Done when:** Tests prove HTTPS host-only cookies, SSR identity, strict origins and valid deployment configuration. Exact Render values and the Google callback are documented. No hosted setting or email provider is changed.
 
