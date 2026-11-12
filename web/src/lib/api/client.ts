@@ -1,6 +1,6 @@
 import { z } from "zod"
 
-import { getForwardedCookie } from "./forwarded-cookie"
+import { getForwardedHeaders } from "./forwarded-headers"
 
 export class ApiError extends Error {
   constructor(
@@ -64,15 +64,14 @@ export async function apiFetch<TSchema extends z.ZodType>(
   path: string,
   o: Options<TSchema>
 ): Promise<z.output<TSchema>> {
-  const headers = new Headers()
+  const url = buildUrl(path, o.query)
+  const headers = isServer
+    ? await getForwardedHeaders(url, o.method ?? "GET")
+    : new Headers()
   if (o.body !== undefined) headers.set("content-type", "application/json")
-  if (isServer) {
-    const cookie = await getForwardedCookie()
-    if (cookie) headers.set("cookie", cookie)
-  }
   let res: Response
   try {
-    res = await fetch(buildUrl(path, o.query), {
+    res = await fetch(url, {
       method: o.method ?? "GET",
       credentials: "include",
       headers,

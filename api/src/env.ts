@@ -61,6 +61,13 @@ const core = {
         .map((ip) => ip.trim())
         .filter(Boolean)
     ),
+  CLIENT_IP_MODE: z.enum(["socket", "render"]).default("socket"),
+  PROXY_CLIENT_IP_SECRET: z.string().min(32).optional(),
+  API_PUBLIC_ORIGIN: z
+    .url()
+    .refine(isOrigin)
+    .transform((value) => new URL(value).origin)
+    .optional(),
   BETTER_AUTH_SECRET: z.string().min(32),
   BETTER_AUTH_URL: z.url(),
   // Semver such as 1.4.0 (A18 426 gate).
@@ -77,10 +84,12 @@ const core = {
   ADMIN_RECOVERY_EMAIL: z.email().optional(),
 }
 
-const devSchema = z.object({
-  ...core,
-  ...z.object({ ...services, ...optionalServices }).partial().shape,
-})
+const devSchema = z
+  .object({
+    ...core,
+    ...z.object({ ...services, ...optionalServices }).partial().shape,
+  })
+  .superRefine(requireProxyConfig)
 
 export type Env = z.infer<typeof devSchema>
 
@@ -94,6 +103,7 @@ const prodSchema = z
     requireGroup(data, FACEBOOK_KEYS, ctx)
     requireGroup(data, APPLE_KEYS, ctx)
   })
+  .superRefine(requireProxyConfig)
 
 // A blank line in .env (`SMTP_HOST=`) counts as not set.
 const source = Object.fromEntries(
@@ -111,6 +121,42 @@ if (!result.success) {
 }
 
 export const env: Env = result.data
+
+function isOrigin(value: string) {
+  if (!URL.canParse(value)) return false
+  const url = new URL(value)
+  return (
+    (url.protocol === "https:" || url.protocol === "http:") &&
+    (value === url.origin || value === `${url.origin}/`)
+  )
+}
+
+function requireProxyConfig(
+  data: z.infer<z.ZodObject<typeof core>>,
+  ctx: z.RefinementCtx
+) {
+  if (data.CLIENT_IP_MODE !== "render") return
+  if (
+    data.PROXY_CLIENT_IP_SECRET &&
+    [data.BETTER_AUTH_SECRET, data.ADMIN_SECRET_KEY].includes(
+      data.PROXY_CLIENT_IP_SECRET
+    )
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["PROXY_CLIENT_IP_SECRET"],
+      message: "Use a dedicated proxy key",
+    })
+  }
+  for (const key of ["PROXY_CLIENT_IP_SECRET", "API_PUBLIC_ORIGIN"] as const) {
+    if (!data[key])
+      ctx.addIssue({
+        code: "custom",
+        path: [key],
+        message: "Required for Render client IP mode",
+      })
+  }
+}
 
 function requireGroup(
   data: Partial<Env>,

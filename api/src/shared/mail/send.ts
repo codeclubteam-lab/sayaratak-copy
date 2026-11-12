@@ -2,6 +2,7 @@ import { z } from "zod"
 
 import { env } from "~/env"
 import { db } from "~/shared/db/client"
+import { transaction } from "~/shared/db/tx"
 import { log } from "~/shared/log/logger"
 import { newId } from "~/shared/text/ids"
 import { clock } from "~/shared/time/clock"
@@ -127,10 +128,20 @@ function queue(mail: QueuedMail) {
 
 async function writeAndDeliver(mail: QueuedMail) {
   try {
-    const locale = await mail.locale
+    const row = await reserveCode({ ...mail, locale: await mail.locale })
+    // Reservation committed and its recipient lock released before any SMTP work.
+    if (row) await deliver(row)
+  } catch (error) {
+    log.error("mail_queue_failed", { template: mail.template, error })
+  }
+}
+
+function reserveCode(mail: CodeMail) {
+  return transaction(async (tx) => {
+    await q.lockMailRecipient(tx, mail.to)
     const now = clock.now()
     const recent = await q.countSentTo(
-      db,
+      tx,
       mail.to,
       new Date(now.getTime() - HOUR_MS)
     )
@@ -138,20 +149,17 @@ async function writeAndDeliver(mail: QueuedMail) {
       log.warn("mail_capped", { to: mail.to, template: mail.template })
       return
     }
-    const row = await q.insertOutbox(db, {
+    return q.insertOutbox(tx, {
       id: newId("out"),
       channel: "email",
       to: mail.to,
       template: mail.template,
-      locale,
+      locale: mail.locale,
       payload: { code: mail.code },
       sendAfter: now,
       createdAt: now,
     })
-    if (row) await deliver(row)
-  } catch (error) {
-    log.error("mail_queue_failed", { template: mail.template, error })
-  }
+  })
 }
 
 async function transmit(mail: SentMail) {

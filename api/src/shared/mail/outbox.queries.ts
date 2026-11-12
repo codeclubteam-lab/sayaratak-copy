@@ -18,6 +18,16 @@ import { type NewOutboxRow, outbox } from "./outbox.tables"
 
 export type { OutboxRow } from "./outbox.tables"
 
+const CODE_MAIL_LOCK = "sayaratak:code-mail"
+
+/** Hold through count plus insertion so concurrent code sends cannot reserve the same slot. */
+export async function lockMailRecipient(ex: Executor, to: string) {
+  // Transaction-scoped and recipient-specific; collisions only serialize unrelated recipients.
+  await ex.execute(
+    sql`select pg_advisory_xact_lock(hashtext(${CODE_MAIL_LOCK}), hashtext(${to}))`
+  )
+}
+
 export function insertOutbox(ex: Executor, row: NewOutboxRow) {
   return ex
     .insert(outbox)

@@ -128,7 +128,18 @@ const base = new Hono()
   .onError(onError)
   .notFound(onNotFound)
   .use(requestId())
-  .use(clientIp(env.TRUSTED_PROXIES))
+  .use(
+    clientIp(
+      env.TRUSTED_PROXIES,
+      env.CLIENT_IP_MODE === "render"
+        ? {
+            mode: "render",
+            secret: env.PROXY_CLIENT_IP_SECRET ?? "",
+            origin: env.API_PUBLIC_ORIGIN ?? "",
+          }
+        : { mode: "socket" }
+    )
+  )
   .use(requestLog())
   .use(
     secureHeaders({

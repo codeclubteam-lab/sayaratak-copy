@@ -1,9 +1,16 @@
 import handler, { createServerEntry } from "@tanstack/react-start/server-entry"
 
 import { buildCsp } from "@/lib/csp"
+import { forwardApiRequest } from "@/lib/server/api-proxy"
+import { readProxyIpConfig } from "@/lib/server/proxy-client-ip"
 
 export default createServerEntry({
   async fetch(request, opts) {
+    const api = await forwardApiRequest(request, {
+      apiBaseUrl: process.env.API_BASE_URL || "http://localhost:4000",
+      clientIp: readProxyIpConfig(process.env),
+    })
+    if (api) return api
     const nonce = crypto.randomUUID()
     const res = await handler.fetch(request, {
       ...opts,

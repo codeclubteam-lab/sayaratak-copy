@@ -1,5 +1,14 @@
 import { BlockList, isIP } from "node:net"
+import {
+  PROXY_IP_HEADERS,
+  readRenderIp,
+  verifyClientIp,
+} from "@sayaratak/shared/lib/proxy-client-ip"
 import type { Context, MiddlewareHandler } from "hono"
+
+import { clock } from "~/shared/time/clock"
+
+import { fail } from "./errors"
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -14,15 +23,48 @@ type SocketServer = {
   requestIP(request: Request): { address: string } | null
 }
 
+type IpPolicy =
+  | { mode: "socket" }
+  | { mode: "render"; secret: string; origin: string }
+
 /** Sets `clientIp`, the address every rate limit and audit row uses (A3). */
-export function clientIp(trustedProxies: string[]): MiddlewareHandler {
+export function clientIp(
+  trustedProxies: string[],
+  policy: IpPolicy = { mode: "socket" }
+): MiddlewareHandler {
   const trusted = proxyList(trustedProxies)
   return async (c, next) => {
     const peer = socketIp(c) ?? NO_SOCKET
     const forwarded = c.req.header("x-forwarded-for")
-    c.set("clientIp", realIp(peer, forwarded, trusted))
+    c.set(
+      "clientIp",
+      policy.mode === "render"
+        ? renderIp(c, policy, peer)
+        : realIp(peer, forwarded, trusted)
+    )
     await next()
   }
+}
+
+function renderIp(
+  c: Context,
+  policy: Extract<IpPolicy, { mode: "render" }>,
+  peer: string
+) {
+  if (["/api/health/live", "/api/health/ready"].includes(c.req.path))
+    return peer
+  const request = c.req.raw
+  if (PROXY_IP_HEADERS.some((key) => request.headers.has(key))) {
+    const ip = verifyClientIp(request, {
+      ...policy,
+      now: clock.now().getTime(),
+    })
+    if (!ip) fail.forbidden()
+    return ip
+  }
+  const ip = readRenderIp(request.headers)
+  if (!ip) fail.forbidden()
+  return ip
 }
 
 // A3: X-Forwarded-For counts only when the socket peer is one of our proxies.

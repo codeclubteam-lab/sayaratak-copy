@@ -42,6 +42,55 @@ test("boots in development without service keys", () => {
   expect(boot(valid)).toEqual({ code: 0, stderr: "" })
 })
 
+test("Render IP mode requires a dedicated secret and fixed public API origin", () => {
+  const missing = boot({ ...valid, CLIENT_IP_MODE: "render" })
+  expect(missing.code).toBe(1)
+  expect(missing.stderr).toContain("PROXY_CLIENT_IP_SECRET")
+  expect(missing.stderr).toContain("API_PUBLIC_ORIGIN")
+  expect(
+    boot({
+      ...valid,
+      CLIENT_IP_MODE: "render",
+      PROXY_CLIENT_IP_SECRET: "p".repeat(32),
+      API_PUBLIC_ORIGIN: "https://api.example.test",
+    })
+  ).toEqual({ code: 0, stderr: "" })
+})
+
+test("Render public API origin cannot contain credentials, a path, query or fragment", () => {
+  for (const API_PUBLIC_ORIGIN of [
+    "https://u:p@api.example.test",
+    "https://api.example.test/api/v1",
+    "https://api.example.test?q=x",
+    "https://api.example.test/#x",
+    "ftp://api.example.test",
+    "not a URL",
+  ]) {
+    expect(
+      boot({
+        ...valid,
+        CLIENT_IP_MODE: "render",
+        PROXY_CLIENT_IP_SECRET: "p".repeat(32),
+        API_PUBLIC_ORIGIN,
+      }).code
+    ).toBe(1)
+  }
+})
+
+test("Render proxy key cannot reuse the auth or admin secret", () => {
+  for (const key of [valid.BETTER_AUTH_SECRET, "admin-key-".repeat(5)]) {
+    expect(
+      boot({
+        ...valid,
+        CLIENT_IP_MODE: "render",
+        PROXY_CLIENT_IP_SECRET: key,
+        API_PUBLIC_ORIGIN: "https://api.example.test",
+        ADMIN_SECRET_KEY: "admin-key-".repeat(5),
+      }).code
+    ).toBe(1)
+  }
+})
+
 test("lists every missing core variable", () => {
   const { code, stderr } = boot({ NODE_ENV: "development" })
   expect(code).toBe(1)

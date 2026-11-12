@@ -241,3 +241,45 @@ run it once by hand. A clean pass clears the flag.
   (run `db:migrate`); a database ahead of the image is fine.
 - **Slow search:** the scale numbers and the cases that cost the most are in `plan/progress.md`,
   step 10.6. `scripts/scale-explain.ts` reruns them against a `_scale` database.
+
+### Client IP behind the website proxy
+
+The default `CLIENT_IP_MODE=socket` preserves the existing socket/`TRUSTED_PROXIES` policy.
+Do not trust a browser's forwarding headers or allowlist Render's regional outbound ranges:
+those ranges are shared with unrelated services.
+
+For the approved same-origin Render repair, opt in with `CLIENT_IP_MODE=render` on both services.
+Set the same dedicated `PROXY_CLIENT_IP_SECRET` on both, at least 32 characters, stored only in
+server environments. Never reuse the auth/admin secret or put it in a `VITE_` variable. On the API
+also set `API_PUBLIC_ORIGIN=https://sayaratak-api-91a8.onrender.com`, without an API path.
+These are future Task 4/6 configuration steps, not changes already made to hosted settings.
+
+[Render documents](https://render.com/articles/host-pocketbase-on-render) that its public ingress
+overwrites `CF-Connecting-IP`. Only explicit Render mode reads that validated single-IP header.
+The website strips caller-supplied forwarding/internal headers and signs IP, timestamp, method,
+upstream origin and path/query. The API verifies the HMAC before setting the existing `clientIp`
+used by rate limits, audit records and Better-Auth. SSR uses the same signer directly on the server,
+not an RPC exposing signatures/cookies. Assertions expire after 180 seconds with 30 seconds of
+future clock skew allowed; keep both hosts' clocks synchronized. No body buffering is needed.
+
+Direct/native API callers need no proxy key: the API uses Render's ingress IP for those requests.
+Invalid claimed assertions or missing/malformed provider IP fail with 403 rather than silently
+changing quota identity. Platform health routes remain available without visitor-IP headers.
+The assertion never authenticates a user or relaxes cookies, bearer tokens, CSRF or role checks.
+
+Before live cutover acceptance, compare direct and website-proxied GET request logs from two
+owner-approved networks, including forged forwarding/CF/internal assertion headers. Verify that
+resolved IPs match each network's platform-observed address, not `::1`, web egress or forged values.
+Local injected-header tests prove the code only, not Render's deployed overwrite behavior. Do not
+add a public IP/header echo endpoint. Keep signatures and the signing key out of responses/logs.
+On rollback restore coordinated code, mode/origin and key settings together; retain data/indexes.
+
+### Concurrent code-mail reservations
+
+Code mail remains limited to five reservations per recipient per hour, including pending and
+failed deliveries. The count and outbox insert use one transaction with a recipient-specific
+transaction-scoped advisory lock, so overlapping requests cannot reserve the same remaining slot.
+The lock is released at commit before SMTP delivery. Queueing still runs off the HTTP request;
+over-cap requests keep their existing quiet responses. This needs no schema migration, provider
+change or new setting. Other recipients use separate lock keys; hash collisions can only serialize
+their reservations, not share their allowances. Delivery retries keep the existing outbox behavior.
