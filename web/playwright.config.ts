@@ -10,6 +10,19 @@ const states = process.env.STATES === "1"
 const databaseUrl =
   process.env.DATABASE_URL ??
   "postgres://sayaratak:sayaratak@localhost:5434/sayaratak"
+if (!URL.canParse(databaseUrl))
+  throw new Error("E2E requires local postgres-test")
+const database = new URL(databaseUrl)
+if (
+  !["postgres:", "postgresql:"].includes(database.protocol) ||
+  !["localhost", "127.0.0.1", "[::1]"].includes(database.hostname) ||
+  database.port !== "5434" ||
+  database.pathname !== "/sayaratak" ||
+  database.search ||
+  database.hash
+)
+  throw new Error("E2E requires local postgres-test on port 5434")
+process.env.API_BASE_URL = `http://localhost:${apiPort}`
 const authSecret =
   process.env.BETTER_AUTH_SECRET ?? "e2e-test-auth-secret-0123456789abcdef"
 
@@ -26,7 +39,9 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [{ name: "chrome" }],
-  testIgnore: states ? [/journeys/] : [/states/, /journeys/],
+  testIgnore: states
+    ? [/journeys/, /same-origin/]
+    : [/states/, /journeys/, /same-origin/],
   webServer: [
     {
       command:
@@ -40,9 +55,14 @@ export default defineConfig({
         LOG_REQUESTS: "false",
         PORT: String(apiPort),
         DATABASE_URL: databaseUrl,
+        TEST_DATABASE_URL: databaseUrl,
+        MIGRATE_DATABASE_URL: "",
         BETTER_AUTH_SECRET: authSecret,
-        BETTER_AUTH_URL: `http://localhost:${apiPort}`,
+        BETTER_AUTH_URL: `http://localhost:${port}`,
         WEB_ORIGIN: `http://localhost:${port}`,
+        COOKIE_DOMAIN: "",
+        CLIENT_IP_MODE: "socket",
+        SMTP_HOST: "",
       },
     },
     ...(states
@@ -60,7 +80,7 @@ export default defineConfig({
         ]
       : []),
     {
-      command: `${states ? "" : "bun run build && "}bun run start`,
+      command: "bun run build && bun run start",
       url: `http://localhost:${port}/ar`,
       reuseExistingServer: false,
       timeout: 600_000,
@@ -68,7 +88,8 @@ export default defineConfig({
         PORT: String(port),
         APP_ORIGIN: `http://localhost:${port}`,
         API_BASE_URL: `http://localhost:${states ? proxyPort : apiPort}`,
-        VITE_API_BASE_URL: `http://localhost:${apiPort}`,
+        VITE_API_BASE_URL: `http://localhost:${port}`,
+        CLIENT_IP_MODE: "socket",
       },
     },
   ],

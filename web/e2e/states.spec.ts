@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import { expect, test } from "@playwright/test"
 import type { Page } from "@playwright/test"
 
-import { apiBase, resetLimits, roleCookies } from "./auth"
+import { resetLimits, roleCookies } from "./auth"
 import { routesFor } from "./routes"
 import type { Role } from "./routes"
 
@@ -102,13 +102,16 @@ const blank = (page: Page) =>
   page.evaluate(() => document.body.innerText.trim().length < 20)
 
 // Keep session checks (`/api/v1/me`) and Better-Auth routes live so dashboards still render behind their guard.
-const isDataApi = (u: URL) =>
-  u.origin === apiBase &&
-  u.pathname.startsWith("/api/v1/") &&
-  !/^\/api\/v1\/(?:me$|auth\/)/.test(u.pathname)
+const isDataApi = (origin: string) => {
+  const browserOrigin = new URL(origin).origin
+  return (u: URL) =>
+    u.origin === browserOrigin &&
+    u.pathname.startsWith("/api/v1/") &&
+    !/^\/api\/v1\/(?:me$|auth\/)/.test(u.pathname)
+}
 
-const failApi = (page: Page, status: 500 | 404) =>
-  page.route(isDataApi, (route) =>
+const failApi = (page: Page, status: 500 | 404, origin: string) =>
+  page.route(isDataApi(origin), (route) =>
     route.fulfill({
       status,
       contentType: "application/json",
@@ -118,8 +121,8 @@ const failApi = (page: Page, status: 500 | 404) =>
     })
   )
 
-const delayApi = (page: Page, ms: number) =>
-  page.route(isDataApi, async (route) => {
+const delayApi = (page: Page, ms: number, origin: string) =>
+  page.route(isDataApi(origin), async (route) => {
     await new Promise((resolve) => setTimeout(resolve, ms))
     await route.continue()
   })
@@ -142,7 +145,7 @@ for (const family of families) {
         for (const mode of ["500", "404"] as const)
           test(`${mode} ${url}`, async ({ page, baseURL }) => {
             const errors = watch(page)
-            await failApi(page, Number(mode) as 500 | 404)
+            await failApi(page, Number(mode) as 500 | 404, baseURL!)
             if (!dashboardFamily)
               await page
                 .context()
@@ -197,7 +200,7 @@ for (const family of families) {
 
         test(`latency 2 s ${url}`, async ({ page, baseURL }) => {
           const errors = watch(page)
-          await delayApi(page, 2000)
+          await delayApi(page, 2000, baseURL!)
           if (!dashboardFamily)
             await page
               .context()

@@ -4,12 +4,25 @@ import { defineConfig } from "@playwright/test"
 import type { Options } from "./e2e/journeys/fixtures"
 
 // End-to-end journeys (14.8, 11.5): each journey resets postgres-test, so they run one at a time
-// on their own server (3102) backed by the test-mode API (4000). `bun run test:journeys` builds first.
+// on their own server (3102) backed by the test-mode API (4000), building with that suite's origins.
 const port = 3102
 const apiPort = 4000
 const databaseUrl =
   process.env.DATABASE_URL ??
   "postgres://sayaratak:sayaratak@localhost:5434/sayaratak"
+if (!URL.canParse(databaseUrl))
+  throw new Error("journeys require local postgres-test")
+const database = new URL(databaseUrl)
+if (
+  !["postgres:", "postgresql:"].includes(database.protocol) ||
+  !["localhost", "127.0.0.1", "[::1]"].includes(database.hostname) ||
+  database.port !== "5434" ||
+  database.pathname !== "/sayaratak" ||
+  database.search ||
+  database.hash
+)
+  throw new Error("journeys require local postgres-test on port 5434")
+process.env.API_BASE_URL = `http://localhost:${apiPort}`
 const authSecret =
   process.env.BETTER_AUTH_SECRET ?? "e2e-test-auth-secret-0123456789abcdef"
 
@@ -47,21 +60,27 @@ export default defineConfig<Options>({
         LOG_REQUESTS: "false",
         PORT: String(apiPort),
         DATABASE_URL: databaseUrl,
+        TEST_DATABASE_URL: databaseUrl,
+        MIGRATE_DATABASE_URL: "",
         BETTER_AUTH_SECRET: authSecret,
-        BETTER_AUTH_URL: `http://localhost:${apiPort}`,
+        BETTER_AUTH_URL: `http://localhost:${port}`,
         WEB_ORIGIN: `http://localhost:${port}`,
+        COOKIE_DOMAIN: "",
+        CLIENT_IP_MODE: "socket",
+        SMTP_HOST: "",
       },
     },
     {
-      command: "bun run start",
+      command: "bun run build && bun run start",
       url: `http://localhost:${port}/ar`,
       reuseExistingServer: false,
-      timeout: 120_000,
+      timeout: 600_000,
       env: {
         PORT: String(port),
         APP_ORIGIN: `http://localhost:${port}`,
         API_BASE_URL: `http://localhost:${apiPort}`,
-        VITE_API_BASE_URL: `http://localhost:${apiPort}`,
+        VITE_API_BASE_URL: `http://localhost:${port}`,
+        CLIENT_IP_MODE: "socket",
       },
     },
   ],

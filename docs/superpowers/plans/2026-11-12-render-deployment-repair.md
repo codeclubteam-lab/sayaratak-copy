@@ -32,7 +32,7 @@
 | 6 | Apply the approved repair on Render | New deployment serves both homepages and API readiness passes | Yes, approved settings/deploy and only necessary DB work |
 | 7 | Verify actual signup and login on the live site | Real email verification, persistent login and logout pass | Yes, only agreed test-account actions |
 
-**Current status:** Tasks 1-4 locally complete with their scoped gates; Task 3 includes the separately approved client-IP extension and atomic mail-cap prerequisite. Task 4 includes the owner-approved Nitro startup hook and explicit deferral of the actual Google Console rollback inventory to Task 6 before any Console edit. No hosted setting/data/push/deploy change has occurred. Tasks 5-7 remain separately gated. See both progress trackers for commits/evidence; stop after Task 4 and await Task 5 permission.
+**Current status:** Tasks 1-5 locally complete with their scoped and full regression gates; Task 3 includes the separately approved client-IP extension and atomic mail-cap prerequisite. Task 4 includes the owner-approved Nitro startup hook and explicit deferral of the actual Google Console rollback inventory to Task 6 before any Console edit. Task 5 includes the owner-approved root-relative auth-client compatibility repair, E2E same-origin alignment, state-suite browser-origin matchers and pointer-move fix for the post-wizard publish retry (with desktop `ToastViewport`/`StickyFooter` overlap logged as a separate UI follow-up). Smoke tests pass 12/12; full API (1407/1407 runnable, 7 opt-in skips), full web Vitest (1819/1819), Render production build/size/client leak scan, dedicated same-origin HTTP (10/10) and trusted HTTPS (10/10), full existing journeys (36/36), default auth smoke (16/16), `states-forms` (18/18), `states` `500` sweep (194/194) and Home `404`/latency checks (4/4) all pass. No hosted setting/data/push/deploy change has occurred. Tasks 6-7 remain separately gated. See both progress trackers for exact evidence.
 
 ## Known evidence, checked earlier on 2026-11-12
 
@@ -389,21 +389,27 @@ stopped; graph refreshed. Full local suites and actual Render/email/Google/IP pr
 
 ## Task 5: Prove the complete repair locally
 
+**Owner-approved compatibility amendment (2026-11-12):** Owner selected "Fix both (Recommended)" after browser proof exposed a validator-accepted `/` base crashing Better-Auth SSR and existing E2E origin/build settings conflicting with strict deployment checks. Add a failing unmocked auth-client regression, normalize `/` to the existing unset same-origin behavior in `web/src/lib/auth-client.ts`, and verify actual built SSR/browser transport. Align `web/playwright.config.ts`, `web/playwright.journeys.config.ts` and existing E2E scripts in `web/package.json` so each suite builds and starts with matching website browser/auth origins and a separate fixed upstream. Keep test DB local, preserve assertions/CSRF/provider checks, add no dependency and make no hosted changes. This is still Task 5 only, not permission for Task 6.
+
+**Owner-approved state-matcher amendment (2026-11-12):** Owner approved updating only the browser-origin request filters in `web/e2e/states-forms.spec.ts` and `web/e2e/states.spec.ts` to match the website origin (`baseURL`) rather than direct `apiBase`, preserving all assertions, statuses, timings and direct setup calls, then rerunning affected state checks and completing Task 5 gates. Still Task 5 only, no Task 6 or live actions.
+
+**Owner-approved toast-pointer amendment (2026-11-12):** Owner selected moving the pointer away from the toast in the `422 on Publish` retry case of `web/e2e/states-forms.spec.ts` so its 5-second auto-dismiss timer runs normally without changing UI components in Task 5, and logging the desktop `ToastViewport`/`StickyFooter` overlap as a separate follow-up UI item.
+
 **Scope:** Production-build web plus real local API/test DB. Never point reset-capable tests at Render.
 
 **Files:** Create `web/playwright.same-origin.config.ts` and `web/e2e/same-origin/session.spec.ts`; exclude this directory from the default `web/playwright.config.ts` suite. Create `web/scripts/check-deployment.ts` and `web/tests/deployment-smoke.test.ts` for read-only GET smoke checks. Reuse existing auth fixtures only when the config enforces localhost/test DB, and never for the deployed smoke script.
 
 **Interfaces:** The smoke script accepts the website and API origins as two positional arguments, performs GETs only, validates site/taxonomy/me JSON, checks both homepages and direct API readiness, prints only route/status/check names and exits nonzero on failure. It must not import mocks, seed/reset helpers or OTP retrieval. Export a testable `checkDeployment(webOrigin: string, apiOrigin: string, fetchImpl?: typeof fetch): Promise<boolean>`; the CLI calls it and exits 0 only for true. Importing the module does not run the CLI.
 
-- [ ] Add failing smoke regressions using the injected fetch function: an HTML 404 from `/api/v1/site` fails; 200 JSON signed-out `/me` passes; 503 readiness fails. Assert every issued request is GET. No live mutation is needed to prove these checks.
-- [ ] Run browser integration with the built website on `http://localhost:3103` and a different-site upstream on `http://127.0.0.1:4000`. API `WEB_ORIGIN` and public `BETTER_AUTH_URL` point to the website, COOKIE_DOMAIN is blank, browser API URL is the website, server API URL is the upstream, and the DB is the local postgres-test on 5434. Disable third-party cookies in the browser proof. Do not rely only on two localhost ports to prove the cross-site issue is gone.
+- [x] Add failing smoke regressions using the injected fetch function: an HTML 404 from `/api/v1/site` fails; 200 JSON signed-out `/me` passes; 503 readiness fails. Assert every issued request is GET. No live mutation is needed to prove these checks.
+- [x] Run browser integration with the built website on `http://localhost:3103` and a different-site upstream on `http://127.0.0.1:4000`. API `WEB_ORIGIN` and public `BETTER_AUTH_URL` point to the website, COOKIE_DOMAIN is blank, browser API URL is the website, server API URL is the upstream, and the DB is the local postgres-test on 5434. Disable third-party cookies in the browser proof. Do not rely only on two localhost ports to prove the cross-site issue is gone.
   Include isolated provider-mode requests with injected CF headers/test keys proving SSR/proxy
   signing, two distinct visitor-IP buckets and direct-native behavior; do not mistake injected
   local provider headers for live Render overwrite proof.
-- [ ] Cover `/ar` and `/en`, signup, test-inbox verification on local test mode only, login, reload, locale switch, gated action, logout and expired-session behavior. Assert browser API traffic stays on the website origin. Cover multipart upload and one private-file owner-versus-other-user check locally.
-- [ ] Repeat the cookie acceptance proof under local HTTPS with a trusted local test certificate: HttpOnly, Secure, Lax, host-only, matching logout expiry. If a trusted HTTPS setup is unavailable, record that gate as blocked rather than claiming HTTP proved Secure-cookie behavior.
-- [ ] Check redirects use the public website auth path. Use a controlled local OAuth response for deterministic state/cookie/redirect tests; real Google approval remains Task 6/7.
-- [ ] Run checks sequentially: frozen install/audit with the repository's current ignore list, shared lint/check, API typecheck/lint/check, full API suite with 120000 ms timeout, web typecheck/lint/check/i18n checks, full web Vitest with two workers, build/size, then the dedicated same-origin Playwright config. Regenerate OpenAPI only if API v1 route contracts changed; expect no contract change from transparent forwarding.
+- [x] Cover `/ar` and `/en`, signup, test-inbox verification on local test mode only, login, reload, locale switch, gated action, logout and expired-session behavior. Assert browser API traffic stays on the website origin. Cover multipart upload and one private-file owner-versus-other-user check locally.
+- [x] Repeat the cookie acceptance proof under local HTTPS with a trusted local test certificate: HttpOnly, Secure, Lax, host-only, matching logout expiry. If a trusted HTTPS setup is unavailable, record that gate as blocked rather than claiming HTTP proved Secure-cookie behavior.
+- [x] Check redirects use the public website auth path. Use a controlled local OAuth response for deterministic state/cookie/redirect tests; real Google approval remains Task 6/7.
+- [x] Run checks sequentially: frozen install/audit with the repository's current ignore list, shared lint/check, API typecheck/lint/check, full API suite with 120000 ms timeout, web typecheck/lint/check/i18n checks, full web Vitest with two workers, build/size, then the dedicated same-origin Playwright config. Regenerate OpenAPI only if API v1 route contracts changed; expect no contract change from transparent forwarding.
 
 ```bash
 bun run --cwd web test --maxWorkers=2
@@ -413,7 +419,7 @@ bun run --cwd web test:e2e --config playwright.same-origin.config.ts --workers=1
 ```
 
   The dedicated config must reject any non-local DB URL before importing reset helpers. Existing full journey/state suites are local-only; run affected journeys, and do not waive a failing required gate without owner agreement.
-- [ ] Update trackers, stop temporary services/browser/postgres-test, refresh graphify and commit passing changes as `step 11.6-r5: verify same-origin deployment locally`.
+- [x] Update trackers, stop temporary services/browser/postgres-test, refresh graphify and commit passing changes as `step 11.6-r5: verify same-origin deployment locally`.
 
 **Done when:** The local production-build repair passes its test matrix and applicable regression gates. Report exact results, not "should work." The smoke script is ready for Task 6.
 

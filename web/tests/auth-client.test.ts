@@ -186,6 +186,20 @@ describe("Better-Auth transport", () => {
     )
     vi.resetModules()
   })
+  it("accepts the validator-supported root-relative browser base", async () => {
+    vi.resetModules()
+    vi.doUnmock("@/lib/auth-client")
+    vi.stubEnv("VITE_API_BASE_URL", "/")
+    const { authClient: relative } = await import("@/lib/auth-client")
+    const fetch = reply({ success: true })
+    await authCall(relative.signOut())
+    expect(lastRequest(fetch)).toMatchObject({
+      url: `${window.location.origin}/api/v1/auth/sign-out`,
+      credentials: "include",
+      method: "POST",
+    })
+    vi.resetModules()
+  })
   it("preserves validation fields and Retry-After from the response", async () => {
     reply(
       { code: "validation", fields: { password: "validation.password_weak" } },

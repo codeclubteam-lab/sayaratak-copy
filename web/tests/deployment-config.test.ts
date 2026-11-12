@@ -1,5 +1,7 @@
 // @vitest-environment node
-import { describe, expect, it } from "vitest"
+import { readFileSync } from "node:fs"
+import { afterEach, describe, expect, it, vi } from "vitest"
+import { z } from "zod"
 
 import { readDeploymentConfig } from "@/lib/server/deployment-config"
 
@@ -9,6 +11,40 @@ const deployed = {
   APP_ORIGIN: "https://sayaratak-web.onrender.com",
   VITE_API_BASE_URL: "https://sayaratak-web.onrender.com",
 }
+
+afterEach(() => vi.unstubAllEnvs())
+
+it("existing E2E suites build and start with website browser and public auth origins", async () => {
+  vi.stubEnv(
+    "DATABASE_URL",
+    "postgres://sayaratak:sayaratak@localhost:5434/sayaratak"
+  )
+  const configs = [
+    (await import("../playwright.config")).default,
+    (await import("../playwright.journeys.config")).default,
+  ]
+  for (const config of configs) {
+    const servers = z
+      .array(
+        z.object({
+          command: z.string(),
+          env: z.record(z.string(), z.string()),
+        })
+      )
+      .parse(config.webServer)
+    const api = servers[0]!
+    const web = servers.at(-1)!
+    expect(web.env.VITE_API_BASE_URL).toBe(web.env.APP_ORIGIN)
+    expect(api.env.BETTER_AUTH_URL).toBe(web.env.APP_ORIGIN)
+    expect(api.env.WEB_ORIGIN).toBe(web.env.APP_ORIGIN)
+    expect(web.command).toContain("bun run build")
+  }
+  const { scripts } = z
+    .object({ scripts: z.record(z.string(), z.string()) })
+    .parse(JSON.parse(readFileSync("package.json", "utf8")))
+  expect(scripts["test:journeys"]).not.toMatch(/^bun run build/)
+  expect(scripts["test:states"]).not.toMatch(/^bun run build/)
+})
 
 describe("same-origin deployment configuration", () => {
   it("accepts the exact Render origins", () => {

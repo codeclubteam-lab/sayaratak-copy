@@ -24,10 +24,11 @@ const text = (locale: string, file: string, key: string) => {
   return value
 }
 
-const failMutations = (page: Page, status: 422 | 500) =>
-  page.route(
+const failMutations = (page: Page, status: 422 | 500, origin: string) => {
+  const browserOrigin = new URL(origin).origin
+  return page.route(
     (u) =>
-      u.origin === apiBase &&
+      u.origin === browserOrigin &&
       u.pathname.startsWith("/api/v1/") &&
       u.pathname !== "/api/v1/events",
     (route) => {
@@ -41,6 +42,7 @@ const failMutations = (page: Page, status: 422 | 500) =>
       })
     }
   )
+}
 
 type Form = {
   name: string
@@ -162,7 +164,7 @@ for (const form of forms)
       await field.fill(form.value)
       await form.prepare?.(page)
       const failed = text(locale, ...form.error)
-      await failMutations(page, 422)
+      await failMutations(page, 422, baseURL!)
       await form.submit(page).click()
       // The page says it could not save, and the typed value is still there.
       await expect(page.getByText(failed).first()).toBeVisible()
@@ -189,7 +191,7 @@ test("optimistic favorite rolls back on failure", async ({
   await page.waitForTimeout(1000)
   const add = page.getByRole("button", { name: "Save to favorites" }).first()
   await expect(add).toBeVisible()
-  await failMutations(page, 500)
+  await failMutations(page, 500, baseURL!)
   await add.click()
   await expect(
     page.getByText(text("en", "toast", "toast.error_save")).first()
@@ -204,11 +206,13 @@ test("optimistic favorite rolls back on failure", async ({
 // Slow route navigations (14.6): nothing shows for the first 150 ms, then the progress bar, then the skeleton from 400 ms.
 test("slow navigation shows progress at 150 ms and skeleton at 400 ms", async ({
   page,
+  baseURL,
 }) => {
+  const browserOrigin = new URL(baseURL!).origin
   await page.goto("/en", { waitUntil: "networkidle" })
   await page.waitForTimeout(1500)
   await page.route(
-    (u) => u.origin === apiBase && u.pathname.startsWith("/api/v1/"),
+    (u) => u.origin === browserOrigin && u.pathname.startsWith("/api/v1/"),
     async (route) => {
       await new Promise((resolve) => setTimeout(resolve, 2000))
       await route.continue()
@@ -301,11 +305,12 @@ test("422 on Publish keeps the wizard on the review screen", async ({
   await pick(/^District/)
   await next.click()
   await expect(page).toHaveURL(/step=review/)
-  await failMutations(page, 422)
+  await failMutations(page, 422, baseURL!)
   await page.getByRole("button", { name: "Publish" }).click()
   await expect(page.getByText(/Could not/).first()).toBeVisible()
   await expect(page).toHaveURL(/step=review/)
   await page.unrouteAll()
+  await page.mouse.move(0, 0)
   await page.getByRole("button", { name: "Publish" }).click()
   await expect(page).toHaveURL(/step=done/, { timeout: 15_000 })
   expect(errors, "thrown errors").toEqual([])
@@ -346,7 +351,7 @@ test("422 on the onboarding role step keeps the choice", async ({
   await page.waitForTimeout(1000)
   const choice = page.getByRole("radio", { name: /^Dealership/ })
   await choice.check({ force: true })
-  await failMutations(page, 422)
+  await failMutations(page, 422, baseURL!)
   await page.getByRole("button", { name: "Continue" }).click()
   await expect(page.getByText(/could not save/i).first()).toBeVisible()
   await expect(page).toHaveURL(/onboarding\/role/)
