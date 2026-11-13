@@ -6,7 +6,6 @@ import { draftQuery } from "@/features/auth/queries"
 import { OnboardingStepPage } from "@/features/onboarding/components/onboarding-step-page"
 import {
   mechanicAboutSchema,
-  mechanicContactPlanSchema,
   mechanicExpertiseSchema,
 } from "@/features/onboarding/schemas"
 import { db, resetDb } from "@/mocks/db"
@@ -32,6 +31,8 @@ function Harness() {
 
 const about = {
   name: "Hassan Ali",
+  phone: "+249912345678",
+  whatsapp: "",
   yearsOfExperience: 8,
   bio: "A".repeat(20),
 }
@@ -96,15 +97,18 @@ describe("mechanic schemas", () => {
     expect(parse({ cityId: "" }).success).toBe(false)
   })
 
-  it("contact needs a phone and a plan, WhatsApp may be empty", () => {
-    const ok = { phone: "+249912345678", whatsapp: "", planId: "p" }
-    expect(mechanicContactPlanSchema.safeParse(ok).success).toBe(true)
-    expect(
-      mechanicContactPlanSchema.safeParse({ ...ok, phone: "12" }).success
-    ).toBe(false)
-    expect(
-      mechanicContactPlanSchema.safeParse({ ...ok, planId: "" }).success
-    ).toBe(false)
+  it("about needs a phone, name, years and bio", () => {
+    const ok = {
+      name: "Omar",
+      phone: "+249912345678",
+      whatsapp: "",
+      yearsOfExperience: 5,
+      bio: "A".repeat(30),
+    }
+    expect(mechanicAboutSchema.safeParse(ok).success).toBe(true)
+    expect(mechanicAboutSchema.safeParse({ ...ok, phone: "12" }).success).toBe(
+      false
+    )
   })
 })
 
@@ -116,6 +120,9 @@ describe("mechanic steps", () => {
     expect(draft()).toEqual({})
     fireEvent.change(screen.getByRole("textbox", { name: "Full name" }), {
       target: { value: about.name },
+    })
+    fireEvent.change(screen.getByRole("textbox", { name: "Phone number" }), {
+      target: { value: about.phone },
     })
     fireEvent.change(
       screen.getByRole("textbox", { name: "Years of experience" }),
@@ -152,32 +159,24 @@ describe("mechanic steps", () => {
   })
 })
 
-describe("mechanic contact step and finish", () => {
+describe("mechanic plan step and finish", () => {
   const saved = {
     about,
     expertise,
-    "contact-plan": { phone: "+249912345678", whatsapp: "", planId: "" },
+    plan: { planId: "" },
   }
 
   it("lists the mechanic plans with the free one preselected", async () => {
-    await open("contact-plan", { about, expertise })
+    await open("plan", { about, expertise })
     await screen.findByRole("radio", { checked: true })
     const radios = screen.getAllByRole("radio")
     expect(radios).toHaveLength(2)
     expect((radios[0] as HTMLInputElement).checked).toBe(true)
     expect(screen.getByText("Start free")).toBeTruthy()
-    expect(screen.getByRole("textbox", { name: "Phone number" })).toBeTruthy()
   })
 
   it("creates a listed mechanic profile on the free plan", async () => {
-    const { router } = await open("contact-plan", saved)
-    // The saved draft reaches the form after the free plan is preselected and clears it for a moment; wait for both.
-    await waitFor(() =>
-      expect(
-        screen.getByRole<HTMLInputElement>("textbox", { name: "Phone number" })
-          .value
-      ).not.toBe("")
-    )
+    const { router } = await open("plan", saved)
     await screen.findByRole("radio", { checked: true })
     fireEvent.click(screen.getByRole("button", { name: "Create my profile" }))
     await waitFor(

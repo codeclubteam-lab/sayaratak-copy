@@ -41,6 +41,8 @@
   "onboarding.step_mechanic_expertise_helper": "Pick what you repair and where you work.",
   "onboarding.step_mechanic_contact_plan_title": "Contact and plan",
   "onboarding.step_mechanic_contact_plan_helper": "Tell customers how to reach you and choose a plan.",
+  "onboarding.step_mechanic_plan_title": "Choose a plan",
+  "onboarding.step_mechanic_plan_helper": "Change plans anytime in Billing. Paid plans start once your transfer is verified.",
   "onboarding.user_avatar_label": "Add a photo",
   "onboarding.user_interests_legend": "What are you looking for?",
   "onboarding.interest_tuk_tuks": "Tuk-tuks",

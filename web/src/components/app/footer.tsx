@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { useLocation, useRouter } from "@tanstack/react-router"
 import { Mail, Phone } from "lucide-react"
 
 import { useT } from "@/lib/i18n/use-t"
-import { marketplaceLinks, serviceLinks } from "@/lib/navigation"
+import { localeHref, marketplaceLinks, serviceLinks } from "@/lib/navigation"
 import { toWhatsappUrl } from "@sayaratak/shared/lib/phone"
 import { siteQuery } from "@/features/pages/queries"
 import { Button } from "@/components/ui/button"
@@ -12,6 +13,13 @@ import { BrandIcon } from "./brand-icon"
 import { BrandLogo } from "./brand-logo"
 import { LanguageSwitcher } from "./language-switcher"
 import { ShellLink } from "./shell-link"
+import {
+  FacebookIcon,
+  InstagramIcon,
+  WhatsappIcon,
+  XIcon,
+  YoutubeIcon,
+} from "./social-icons"
 
 const groups = [
   { key: "nav.marketplace", links: marketplaceLinks },
@@ -34,6 +42,10 @@ const groups = [
 
 export function Footer() {
   const { t, locale } = useT()
+  const router = useRouter()
+  const href = useLocation({ select: () => router.history.location.href })
+  const targetLocale = locale === "ar" ? "en" : "ar"
+  const switchHref = localeHref(href, targetLocale)
   const { data, isPending, isError, refetch } = useQuery(siteQuery)
   const [delayed, setDelayed] = useState(false)
   useEffect(() => {
@@ -147,31 +159,108 @@ export function Footer() {
           ))}
         </nav>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-border pt-6 text-caption">
-          <p>
-            <span className="text-muted-foreground">{t("nav.copyright")}</span>
+        <div className="border-t border-border pt-6 pb-8">
+          <p className="text-caption text-muted-foreground">
+            {t("nav.copyright")}
           </p>
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center gap-1.5 font-medium text-primary">
-              <span
-                className="size-1.5 rounded-full bg-primary"
-                aria-hidden="true"
-              />
-              <span>{t("nav.status_online")}</span>
-            </span>
-            <span className="text-muted-foreground/40">•</span>
-            <span className="text-muted-foreground">{t("nav.sdg_only")}</span>
+
+          <hr className="my-4 border-t border-border/80" />
+
+          <div className="flex flex-col gap-4 text-caption md:flex-row md:items-center md:justify-between">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+              <a
+                href={switchHref}
+                hrefLang={targetLocale}
+                lang={targetLocale}
+                className="font-bold text-foreground transition-colors hover:text-primary"
+              >
+                {locale === "ar" ? "السودان / العربية" : "Sudan / English"}
+              </a>
+              <span className="text-muted-foreground/30" aria-hidden="true">
+                |
+              </span>
+              <ShellLink
+                path="/privacy"
+                className="text-muted-foreground transition-colors hover:text-primary"
+              >
+                {t("nav.privacy")}
+              </ShellLink>
+              <ShellLink
+                path="/terms"
+                className="text-muted-foreground transition-colors hover:text-primary"
+              >
+                {t("nav.terms")}
+              </ShellLink>
+              <ShellLink
+                path="/about"
+                className="text-muted-foreground transition-colors hover:text-primary"
+              >
+                {t("nav.about")}
+              </ShellLink>
+              <ShellLink
+                path="/contact"
+                className="text-muted-foreground transition-colors hover:text-primary"
+              >
+                {t("nav.contact")}
+              </ShellLink>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="font-medium text-foreground">
+                {t("nav.stay_in_loop")}
+              </span>
+              <div className="flex items-center gap-2">
+                <a
+                  href="https://facebook.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Facebook"
+                  className="flex size-7 items-center justify-center rounded-full text-foreground transition-colors hover:text-primary"
+                >
+                  <FacebookIcon className="size-4" />
+                </a>
+                <a
+                  href="https://x.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="X"
+                  className="flex size-7 items-center justify-center rounded-full text-foreground transition-colors hover:text-primary"
+                >
+                  <XIcon className="size-3.5" />
+                </a>
+                <a
+                  href="https://instagram.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Instagram"
+                  className="flex size-7 items-center justify-center rounded-full text-foreground transition-colors hover:text-primary"
+                >
+                  <InstagramIcon className="size-4" />
+                </a>
+                <a
+                  href="https://youtube.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="YouTube"
+                  className="flex size-7 items-center justify-center rounded-full text-foreground transition-colors hover:text-primary"
+                >
+                  <YoutubeIcon className="size-4" />
+                </a>
+                {contact?.whatsapp ? (
+                  <a
+                    href={toWhatsappUrl(contact.whatsapp)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="WhatsApp"
+                    className="flex size-7 items-center justify-center rounded-full text-foreground transition-colors hover:text-primary"
+                  >
+                    <WhatsappIcon className="size-4" />
+                  </a>
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none mt-2 flex justify-center overflow-hidden select-none"
-      >
-        <span className="block translate-y-3 text-[clamp(4.5rem,15vw,13.5rem)] leading-[0.72] font-black tracking-tighter text-muted-foreground/15 uppercase md:translate-y-6">
-          {locale === "ar" ? "سياراتك" : "SAYARATAK"}
-        </span>
       </div>
     </footer>
   )

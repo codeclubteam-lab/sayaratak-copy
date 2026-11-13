@@ -8,10 +8,13 @@ import { useT } from "@/lib/i18n/use-t"
 import { mediaFromId } from "../media"
 import type { MechanicAbout } from "../schemas"
 import { DescriptionField } from "./description-field"
+import { PhoneField } from "./phone-field"
+import { WhatsappField } from "./whatsapp-field"
 
 export function MechanicAboutStep() {
   const { t } = useT()
-  const { control, register, formState } = useFormContext<MechanicAbout>()
+  const { control, register, formState, watch } =
+    useFormContext<MechanicAbout>()
   return (
     <>
       <Controller
@@ -33,6 +36,10 @@ export function MechanicAboutStep() {
           <Input {...c} {...register("name")} size="lg" autoComplete="name" />
         )}
       </FormField>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <PhoneField />
+        <WhatsappField first={watch("phone")} />
+      </div>
       <Controller
         control={control}
         name="yearsOfExperience"

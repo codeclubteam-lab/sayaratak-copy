@@ -83,9 +83,10 @@ const runs: Array<{
     role: "mechanic",
     name: "Journey Mechanic",
     directory: "/mechanics",
-    resume: "contact-plan",
+    resume: "plan",
     steps: [
       async (page, t) => {
+        await box(page, t("form.phone")).fill("912345622")
         await box(page, t("onboarding.mechanic_years_label")).fill("8")
         await box(page, t("onboarding.mechanic_bio_label")).fill(about)
       },
@@ -98,7 +99,6 @@ const runs: Array<{
         )
       },
       async (page, t, lang) => {
-        await box(page, t("form.phone")).fill("912345622")
         await freePlan(page, t, lang)
       },
     ],

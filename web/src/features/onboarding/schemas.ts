@@ -82,6 +82,8 @@ export type PlanStep = z.infer<typeof planStepSchema>
 export const mechanicAboutSchema = z.object({
   name: nameSchema,
   photoId: z.string().optional(),
+  phone: phoneSchema,
+  whatsapp: phoneSchema.or(z.literal("")),
   yearsOfExperience: requiredInt(0, 60),
   bio: z
     .string()

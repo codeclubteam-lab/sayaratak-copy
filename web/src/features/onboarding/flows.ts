@@ -14,7 +14,6 @@ import {
   dealerLocationSchema,
   hoursStepSchema,
   mechanicAboutSchema,
-  mechanicContactPlanSchema,
   mechanicExpertiseSchema,
   planStepSchema,
   userOnboardingSchema,
@@ -41,11 +40,6 @@ const HoursStep = lazy(() =>
 const MechanicAboutStep = lazy(() =>
   import("./components/mechanic-about-step").then((m) => ({
     default: m.MechanicAboutStep,
-  }))
-)
-const MechanicContactPlanStep = lazy(() =>
-  import("./components/mechanic-contact-plan-step").then((m) => ({
-    default: m.MechanicContactPlanStep,
   }))
 )
 const MechanicExpertiseStep = lazy(() =>
@@ -88,7 +82,7 @@ export type FlowStep = {
 // Steps shared by the dealership and workshop flows take their audience as a prop.
 const businessStep = (kind: "dealership" | "workshop") => () =>
   createElement(BusinessStep, { kind })
-const planStep = (audience: "dealership" | "workshop") => () =>
+const planStep = (audience: "dealership" | "workshop" | "mechanic") => () =>
   createElement(PlanStep, { audience })
 
 const step = (role: OnboardingRole, id: string) => {
@@ -182,6 +176,8 @@ export const flows = {
       schema: mechanicAboutSchema,
       defaults: (me) => ({
         name: me.fullName,
+        phone: me.phone ?? "",
+        whatsapp: "",
         yearsOfExperience: null,
         bio: "",
       }),
@@ -198,15 +194,13 @@ export const flows = {
       Component: MechanicExpertiseStep,
     },
     {
-      ...step("mechanic", "contact-plan"),
-      schema: mechanicContactPlanSchema,
-      defaults: (me) => ({
-        phone: me.phone ?? "",
-        whatsapp: "",
+      ...step("mechanic", "plan"),
+      schema: planStepSchema,
+      defaults: () => ({
         planId: "",
       }),
       wide: true,
-      Component: MechanicContactPlanStep,
+      Component: planStep("mechanic"),
     },
   ],
 } satisfies Record<OnboardingRole, FlowStep[]>
