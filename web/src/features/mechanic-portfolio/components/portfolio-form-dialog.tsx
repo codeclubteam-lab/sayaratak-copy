@@ -19,8 +19,8 @@ import { useT } from "@/lib/i18n/use-t"
 import type { Media } from "@sayaratak/shared/schemas/listing"
 import { portfolioFormSchema, type PortfolioForm } from "../schemas"
 
-// A new item (photo and caption) or a saved one (its id; only the caption changes).
-export type PortfolioDraft = { id?: string; caption: string }
+// A new item (photo and caption) or a saved one (with optional photo replacement).
+export type PortfolioDraft = { id?: string; caption: string; image?: Media }
 
 function PortfolioFormBody({
   draft,
@@ -32,12 +32,14 @@ function PortfolioFormBody({
   const { t } = useT()
   const add = useAddPortfolioItem()
   const update = useUpdatePortfolioItem()
-  const [image, setImage] = useState<Media[]>([])
+  const [image, setImage] = useState<Media[]>(draft.image ? [draft.image] : [])
   const form = useAppForm<PortfolioForm>({
     resolver: zodResolver(portfolioFormSchema),
     mode: "onTouched",
-    // A saved item keeps its photo, so the id only fills the required field.
-    defaultValues: { imageId: draft.id ?? "", caption: draft.caption },
+    defaultValues: {
+      imageId: draft.image?.id ?? draft.id ?? "",
+      caption: draft.caption,
+    },
   })
   const { errors } = form.formState
   const done = (key: string) => () => {
@@ -45,37 +47,42 @@ function PortfolioFormBody({
     onDone()
   }
   const fail = (error: unknown) => toast.add({ title: errorText(t, error) })
-  const submit = form.handleSubmit((values) =>
-    draft.id
-      ? update.mutate(
-          { id: draft.id, caption: values.caption },
-          { onSuccess: done("toast.portfolio_saved"), onError: fail }
-        )
-      : add.mutate(values, {
-          onSuccess: done("toast.portfolio_added"),
-          onError: fail,
-        })
-  )
+  const submit = form.handleSubmit((values) => {
+    if (draft.id) {
+      const nextId = image[0]?.id
+      const changed = Boolean(nextId && nextId !== draft.image?.id)
+      return update.mutate(
+        {
+          id: draft.id,
+          caption: values.caption,
+          ...(changed && nextId ? { imageId: nextId } : {}),
+        },
+        { onSuccess: done("toast.portfolio_saved"), onError: fail }
+      )
+    }
+    return add.mutate(values, {
+      onSuccess: done("toast.portfolio_added"),
+      onError: fail,
+    })
+  })
   const caption = form.watch("caption")
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-4">
-      {!draft.id && (
-        <div className="flex flex-col gap-1">
-          <ImageUploader
-            mode="single"
-            shape="wide"
-            label={t("dashboard.portfolio_photo")}
-            value={image}
-            onChange={(next) => {
-              setImage(next)
-              form.setValue("imageId", next[0]?.id ?? "", {
-                shouldValidate: form.formState.isSubmitted,
-              })
-            }}
-          />
-          <FieldError message={errors.imageId?.message} />
-        </div>
-      )}
+      <div className="flex flex-col gap-1">
+        <ImageUploader
+          mode="single"
+          shape="wide"
+          label={t("dashboard.portfolio_photo")}
+          value={image}
+          onChange={(next) => {
+            setImage(next)
+            form.setValue("imageId", next[0]?.id ?? "", {
+              shouldValidate: form.formState.isSubmitted,
+            })
+          }}
+        />
+        <FieldError message={errors.imageId?.message} />
+      </div>
       <FormField
         label={t("dashboard.portfolio_caption")}
         error={errors.caption?.message}

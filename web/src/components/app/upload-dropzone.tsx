@@ -34,8 +34,10 @@ export function UploadDropzone({
         onFiles([...e.dataTransfer.files])
       }}
       className={cn(
-        "flex min-h-11 cursor-pointer flex-col items-center justify-center gap-2 p-3 text-center text-ui has-focus-visible:ring-2 has-focus-visible:ring-ring",
-        over ? "bg-accent" : "bg-muted",
+        "flex min-h-11 cursor-pointer flex-col items-center justify-center gap-2 border-2 border-dashed p-3 text-center text-ui transition-colors has-focus-visible:ring-2 has-focus-visible:ring-ring",
+        over
+          ? "border-primary bg-primary/10 text-primary"
+          : "border-border/80 bg-muted/50 text-muted-foreground hover:border-primary/50 hover:bg-muted",
         className
       )}
     >
@@ -50,8 +52,14 @@ export function UploadDropzone({
           e.target.value = ""
         }}
       />
-      <UploadIcon aria-hidden className="size-5 text-muted-foreground" />
-      <span className="text-muted-foreground">{children}</span>
+      <UploadIcon
+        aria-hidden
+        className={cn(
+          "size-5 transition-colors",
+          over ? "text-primary" : "text-muted-foreground"
+        )}
+      />
+      <span className="text-caption font-medium">{children}</span>
     </label>
   )
 }

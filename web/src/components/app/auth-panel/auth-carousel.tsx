@@ -75,7 +75,7 @@ export function AuthCarousel() {
       </div>
       <div
         aria-hidden
-        className="relative ms-12 mt-12 min-h-0 flex-1 overflow-hidden"
+        className="relative ms-12 mt-12 min-h-0 flex-1 overflow-hidden rounded-xl"
       >
         {slides.map((s, i) => (
           <div key={s.id} className={`absolute inset-0 ${fade(i === index)}`}>

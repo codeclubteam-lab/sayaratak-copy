@@ -97,18 +97,45 @@ describe("PortfolioPage", () => {
     fireEvent.click(
       await screen.findByRole("button", { name: "Actions for Gearbox rebuild" })
     )
-    fireEvent.click(
-      await screen.findByRole("menuitem", { name: "Edit caption" })
-    )
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Edit" }))
     const edit = await screen.findByRole("dialog")
+    const newMedia: Media = {
+      id: "up_new_job",
+      type: "image",
+      url: "/api/uploads/up_new_job?w={w}",
+      width: 120,
+      height: 90,
+      placeholderColor: "#334455",
+      posterUrl: null,
+    }
+    db.uploads.set(newMedia.id, {
+      id: newMedia.id,
+      name: "new_job.webp",
+      type: "image/webp",
+      bytes: new ArrayBuffer(1),
+      media: newMedia,
+    })
+    vi.mocked(uploadMedia).mockResolvedValue(newMedia)
+    fireEvent.change(edit.querySelector('input[type="file"]')!, {
+      target: {
+        files: [new File(["y"], "new_job.jpg", { type: "image/jpeg" })],
+      },
+    })
+    await waitFor(() => expect(uploadMedia).toHaveBeenCalledTimes(2))
     fireEvent.change(within(edit).getByLabelText(/Caption/), {
       target: { value: "Gearbox rebuilt" },
     })
     fireEvent.click(within(edit).getByRole("button", { name: "Save" }))
     await waitFor(() =>
-      expect(mechanic().portfolio.at(-1)?.caption).toBe("Gearbox rebuilt")
+      expect(mechanic().portfolio.at(-1)).toMatchObject({
+        url: newMedia.url,
+        caption: "Gearbox rebuilt",
+      })
     )
-    expect((await publicPortfolio()).at(-1)?.caption).toBe("Gearbox rebuilt")
+    expect((await publicPortfolio()).at(-1)).toMatchObject({
+      url: newMedia.url,
+      caption: "Gearbox rebuilt",
+    })
   })
 
   it("moves an item later at once and keeps focus on its arrow", async () => {

@@ -36,14 +36,18 @@ export async function addMyPortfolioItem(
   })
 }
 
-/** `PATCH /me/portfolio/:id`: changes the caption; 404 for an item the mechanic does not have. */
+/** `PATCH /me/portfolio/:id`: changes the caption and optionally the picture; 404 for an item the mechanic does not have. */
 export async function updateMyPortfolioItem(
   user: SessionUser,
-  edit: { id: string; caption: string }
+  edit: { id: string; caption: string; imageId?: string }
 ) {
   return transaction(async (tx) => {
     const mechanicId = await lockOwnMechanic(tx, user.id)
-    const saved = await portfolio.updateCaption(tx, { mechanicId, ...edit })
+    const saved = await portfolio.updatePortfolioItem(tx, {
+      mechanicId,
+      ownerUserId: user.id,
+      ...edit,
+    })
     if (!saved) fail.notFound()
     return saved
   })

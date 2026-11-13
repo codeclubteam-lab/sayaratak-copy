@@ -2,6 +2,7 @@ import { okSchema } from "@sayaratak/shared/schemas/api"
 import {
   idsInputSchema,
   portfolioInputSchema,
+  portfolioUpdateSchema,
 } from "@sayaratak/shared/schemas/inputs"
 import { mechanicSchema } from "@sayaratak/shared/schemas/profile"
 import { Hono } from "hono"
@@ -22,8 +23,6 @@ export const mechanicPortfolioRoutes = new Hono()
 
 const itemSchema = mechanicSchema.shape.portfolio.element
 const listSchema = mechanicSchema.shape.portfolio
-// Only the caption can change; the picture stays.
-const captionSchema = portfolioInputSchema.pick({ caption: true })
 const OWNER_ERRORS = [
   "unauthenticated",
   "banned",
@@ -78,18 +77,18 @@ mechanicPortfolioRoutes.post(
 mechanicPortfolioRoutes.patch(
   "/me/portfolio/:id",
   spec({
-    summary: "Change the caption of one picture",
+    summary: "Change the caption and optionally the picture of one item",
     access: "user",
     responses: { 200: itemSchema },
     errors: [...OWNER_ERRORS, "validation"],
   }),
   requireRole("mechanic"),
-  validate.json(captionSchema),
+  validate.json(portfolioUpdateSchema),
   async (c) =>
     c.json(
       await updateMyPortfolioItem(c.get("user"), {
         id: c.req.param("id"),
-        caption: c.req.valid("json").caption,
+        ...c.req.valid("json"),
       })
     )
 )

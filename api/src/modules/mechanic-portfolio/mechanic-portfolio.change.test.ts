@@ -8,6 +8,7 @@ import {
 } from "~/modules/businesses/businesses.tables"
 import { uploads } from "~/modules/uploads/uploads.tables"
 
+import { uploadPhotos } from "../../../tests/listings"
 import { expectSchema, resetDb, signIn } from "../../../tests/helpers"
 import {
   itemSchema,
@@ -35,7 +36,6 @@ describe("PATCH /me/portfolio/:id", () => {
     const [row] = await list(person)
     const res = await patch(person, row?.id ?? "", {
       caption: "New caption",
-      imageId: "ignored",
     })
     expect(res.status).toBe(200)
     expect(await expectSchema(res, itemSchema)).toEqual({
@@ -48,6 +48,31 @@ describe("PATCH /me/portfolio/:id", () => {
       placeholderColor: row?.placeholderColor ?? "",
     })
     expect((await list(person))[0]?.caption).toBe("New caption")
+  })
+
+  test("changes the picture and caption, deleting the old upload", async () => {
+    const person = await signIn("mechanic")
+    const [row] = await list(person)
+    const [itemBefore] = await db
+      .select()
+      .from(portfolioItems)
+      .where(eq(portfolioItems.id, row?.id ?? ""))
+    const [newPhoto] = await uploadPhotos(person, 1)
+    const res = await patch(person, row?.id ?? "", {
+      caption: "Replaced caption",
+      imageId: newPhoto?.id,
+    })
+    expect(res.status).toBe(200)
+    const updated = await expectSchema(res, itemSchema)
+    expect(updated).toMatchObject({
+      caption: "Replaced caption",
+      url: newPhoto?.url,
+    })
+    const oldUploadRows = await db
+      .select()
+      .from(uploads)
+      .where(eq(uploads.id, itemBefore?.uploadId ?? ""))
+    expect(oldUploadRows).toHaveLength(0)
   })
 
   test("returns 404 for an unknown item and for another mechanic's item, and 422 for a wrong caption", async () => {

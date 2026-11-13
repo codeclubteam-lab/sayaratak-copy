@@ -65,15 +65,42 @@ export async function addPortfolioItem(
   return media ? toPortfolioItem(row, media) : undefined
 }
 
-/** Changes a picture's caption (the picture itself stays); undefined when the mechanic has no such item. */
-export async function updateCaption(
+/**
+ * Changes a picture's caption and optionally replaces the upload; undefined when
+ * the mechanic has no such item.
+ */
+export async function updatePortfolioItem(
   tx: Transaction,
-  edit: { mechanicId: string; id: string; caption: string }
+  edit: {
+    mechanicId: string
+    id: string
+    caption: string
+    imageId?: string
+    ownerUserId: string
+  }
 ) {
   const row = await q.getPortfolioRow(tx, edit)
   if (!row) return undefined
-  await q.updatePortfolioRow(tx, row.id, { caption: edit.caption })
-  const media = (await uploads.getMediaOf(tx, [row.uploadId])).get(row.uploadId)
+  const oldUploadId = row.uploadId
+  const replaced = Boolean(edit.imageId && edit.imageId !== oldUploadId)
+  const uploadId = replaced && edit.imageId ? edit.imageId : oldUploadId
+  if (replaced && edit.imageId) {
+    await uploads.attachMedia(tx, {
+      ownerUserId: edit.ownerUserId,
+      ids: [edit.imageId],
+      kept: [oldUploadId],
+      field: "imageId",
+      imagesOnly: true,
+    })
+  }
+  await q.updatePortfolioRow(tx, row.id, {
+    caption: edit.caption,
+    uploadId,
+  })
+  if (replaced) {
+    await uploads.deleteMediaFiles(tx, [oldUploadId])
+  }
+  const media = (await uploads.getMediaOf(tx, [uploadId])).get(uploadId)
   return media
     ? toPortfolioItem({ ...row, caption: edit.caption }, media)
     : undefined

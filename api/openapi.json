@@ -5603,7 +5603,7 @@
     "/api/v1/me/portfolio/{id}": {
       "patch": {
         "operationId": "patchMePortfolioById",
-        "summary": "Change the caption of one picture",
+        "summary": "Change the caption and optionally the picture of one item",
         "security": [
           {
             "session": []
@@ -5633,6 +5633,10 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 120
+                  },
+                  "imageId": {
+                    "type": "string",
+                    "minLength": 1
                   }
                 },
                 "required": [

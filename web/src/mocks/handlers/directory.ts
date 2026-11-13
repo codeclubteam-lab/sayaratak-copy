@@ -10,6 +10,7 @@ import {
   idsInputSchema,
   imagesInputSchema,
   portfolioInputSchema,
+  portfolioUpdateSchema,
   serviceInputSchema,
 } from "@sayaratak/shared/schemas/inputs"
 import { okSchema } from "@sayaratak/shared/schemas/api"
@@ -316,7 +317,17 @@ route("PATCH", "/me/portfolio/:id", async (c) => {
   const m = mechanic(c)
   const row = m.portfolio.find((p) => p.id === c.params.id)
   if (!row) throw fail(404, "not_found")
-  Object.assign(row, await c.body(portfolioInputSchema.pick({ caption: true })))
+  const body = await c.body(portfolioUpdateSchema)
+  row.caption = body.caption
+  if (body.imageId && body.imageId !== row.id) {
+    const upload = db.uploads.get(body.imageId)
+    if (!upload?.media)
+      throw fail(422, "validation", { imageId: "validation.required" })
+    row.url = upload.media.url
+    row.width = upload.media.width
+    row.height = upload.media.height
+    row.placeholderColor = upload.media.placeholderColor
+  }
   return row
 })
 route("DELETE", "/me/portfolio/:id", (c) => {

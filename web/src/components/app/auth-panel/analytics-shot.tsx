@@ -8,14 +8,16 @@ export function AnalyticsShot() {
   const { dataSaver } = usePrefs()
   if (dataSaver) return <ViewsScene />
   return (
-    <img
-      src={`/images/auth/analytics-${locale}.webp`}
-      alt=""
-      loading="lazy"
-      decoding="async"
-      width={1268}
-      height={900}
-      className="absolute start-0 -top-22 h-auto w-[88rem] max-w-none rounded-ss-xl ring-1 ring-foreground/5"
-    />
+    <div className="absolute start-0 top-0 overflow-hidden rounded-xl shadow-floating ring-1 ring-foreground/10">
+      <img
+        src={`/images/auth/analytics-${locale}.webp`}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        width={1268}
+        height={900}
+        className="-mt-16 h-auto w-[72rem] max-w-none rounded-xl md:-mt-22 md:w-[88rem]"
+      />
+    </div>
   )
 }

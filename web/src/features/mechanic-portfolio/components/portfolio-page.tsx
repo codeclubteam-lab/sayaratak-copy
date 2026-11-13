@@ -104,7 +104,21 @@ export function PortfolioPage() {
                 moved.current = { id: p.id, step }
                 reorder.mutate(ids, { onError: fail })
               }}
-              onEdit={() => setDraft({ id: p.id, caption: p.caption })}
+              onEdit={() =>
+                setDraft({
+                  id: p.id,
+                  caption: p.caption,
+                  image: {
+                    id: p.id,
+                    url: p.url,
+                    width: p.width,
+                    height: p.height,
+                    placeholderColor: p.placeholderColor,
+                    type: "image",
+                    posterUrl: null,
+                  },
+                })
+              }
               onDelete={() =>
                 remove.mutate(p.id, {
                   onSuccess: () =>

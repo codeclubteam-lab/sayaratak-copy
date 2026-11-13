@@ -260,6 +260,10 @@ export const portfolioInputSchema = z.object({
   imageId: z.string().min(1, "validation.required"), // an image upload
   caption: requiredText(120),
 })
+export const portfolioUpdateSchema = z.object({
+  caption: requiredText(120),
+  imageId: z.string().min(1, "validation.required").optional(),
+})
 export const idsInputSchema = z.object({ ids: z.array(z.string()) })
 export const imagesInputSchema = z.object({
   url: z.string().min(1, "validation.required"),
