@@ -39,9 +39,9 @@ const ratio = (a: Rgb, b: Rgb) => {
   const [hi, lo] = x > y ? [x, y] : [y, x]
   return (hi + 0.05) / (lo + 0.05)
 }
-// A 12 percent tint of a color over a base, mixed in sRGB.
-const tint = (color: Rgb, base: Rgb): Rgb =>
-  color.map((v, i) => v * 0.12 + (base[i] ?? 0) * 0.88) as Rgb
+// Alpha-composite a color over an opaque surface in sRGB.
+const composite = (color: Rgb, base: Rgb, alpha: number): Rgb =>
+  color.map((v, i) => v * alpha + (base[i] ?? 0) * (1 - alpha)) as Rgb
 
 const table: Record<string, Rgb> = Object.fromEntries(
   [
@@ -57,6 +57,9 @@ const table: Record<string, Rgb> = Object.fromEntries(
     "accent-foreground",
     "signal",
     "signal-foreground",
+    "deep",
+    "deep-foreground",
+    "deep-accent",
     "success",
     "warning",
     "destructive",
@@ -82,10 +85,24 @@ const pairs: Array<[string, Rgb, Rgb, number]> = [
   ["muted-foreground on card", t("muted-foreground"), t("card"), 4.5],
   ["muted-foreground on muted", t("muted-foreground"), t("muted"), 4.5],
   ["primary-foreground on primary", t("primary-foreground"), t("primary"), 4.5],
+  [
+    "primary-foreground on primary/90 over card",
+    t("primary-foreground"),
+    composite(t("primary"), t("card"), 0.9),
+    4.5,
+  ],
+  [
+    "primary-foreground on primary/90 over background",
+    t("primary-foreground"),
+    composite(t("primary"), t("background"), 0.9),
+    4.5,
+  ],
   ["primary on card", t("primary"), t("card"), 4.5],
   ["primary on background", t("primary"), t("background"), 4.5],
   ["accent-foreground on accent", t("accent-foreground"), t("accent"), 4.5],
   ["signal-foreground on signal", t("signal-foreground"), t("signal"), 4.5],
+  ["deep-foreground on deep", t("deep-foreground"), t("deep"), 4.5],
+  ["deep-accent on deep", t("deep-accent"), t("deep"), 4.5],
   [
     "primary-foreground on destructive",
     t("primary-foreground"),
@@ -96,25 +113,25 @@ const pairs: Array<[string, Rgb, Rgb, number]> = [
   [
     "badge success on its tint",
     t("success"),
-    tint(t("success"), t("card")),
+    composite(t("success"), t("card"), 0.12),
     4.5,
   ],
   [
     "badge warning on its tint",
     t("warning"),
-    tint(t("warning"), t("card")),
+    composite(t("warning"), t("card"), 0.12),
     4.5,
   ],
   [
     "badge destructive on its tint",
     t("destructive"),
-    tint(t("destructive"), t("card")),
+    composite(t("destructive"), t("card"), 0.12),
     4.5,
   ],
   [
     "badge primary on its tint",
     t("primary"),
-    tint(t("primary"), t("card")),
+    composite(t("primary"), t("card"), 0.12),
     4.5,
   ],
   ["input border on card", t("input"), t("card"), 3],

@@ -34,7 +34,7 @@ Send these from the native HTTP client, not a webview with a browser cookie jar.
 | `Authorization` | `Bearer <session token>` | Signed-in API requests, including private file downloads |
 | `X-Platform` | `ios` or `android` | Every API request |
 | `X-App-Version` | Three numeric parts, for example `1.4.0` | Every API request; no `v` prefix or build suffix |
-| `Accept-Language` | `ar` or `en` | Every request; used for mail before an account locale exists |
+| `Accept-Language` | `ar` or `en` | Every request; sets initial account language and request-triggered auth mail language, falling back to the saved preference when absent |
 | `Content-Type` | `application/json` | JSON bodies only |
 | `Idempotency-Key` | A fresh UUID per action, reused on retries | Supported create requests, listed below |
 

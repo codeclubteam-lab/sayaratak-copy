@@ -22,6 +22,51 @@ const lastRequest = (fetch: ReturnType<typeof reply>) => ({
 })
 
 describe("Better-Auth transport", () => {
+  it("captures the current page language separately for each auth request", async () => {
+    const original = document.documentElement.lang
+    const fetch = reply({ success: true })
+    try {
+      for (const locale of ["en", "ar"]) {
+        document.documentElement.lang = locale
+        await authCall(
+          authClient.emailOtp.sendVerificationOtp({
+            email: "locale@example.com",
+            type: "email-verification",
+          })
+        )
+        expect(
+          new Headers(lastRequest(fetch).headers).get("accept-language")
+        ).toBe(locale)
+      }
+    } finally {
+      document.documentElement.lang = original
+    }
+  })
+  it("keeps explicitly supplied language and other request headers", async () => {
+    const fetch = reply({ success: true })
+    await authCall(
+      authClient.emailOtp.requestPasswordReset(
+        { email: "locale@example.com" },
+        { headers: { "accept-language": "en", "x-request-id": "locale-test" } }
+      )
+    )
+    const headers = new Headers(lastRequest(fetch).headers)
+    expect(headers.get("accept-language")).toBe("en")
+    expect(headers.get("x-request-id")).toBe("locale-test")
+  })
+  it("does not require a browser document for server-side calls", async () => {
+    const fetch = reply({ success: true })
+    vi.stubGlobal("document", undefined)
+    try {
+      await authCall(authClient.signOut())
+      expect(lastRequest(fetch).credentials).toBe("include")
+      expect(
+        new Headers(lastRequest(fetch).headers).has("accept-language")
+      ).toBe(false)
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
   it("sends credentials to /api/v1/auth and keeps two-factor challenges distinct", async () => {
     const fetch = reply({ twoFactorRedirect: true })
     const result = await authCall(

@@ -38,7 +38,7 @@ export function contrastWithWhite(color: string): number | null {
   return rgb ? 1.05 / (0.2126 * r + 0.7152 * g + 0.0722 * b + 0.05) : null
 }
 
-// A background too light for white text is rejected: the slide keeps the default deep green, and development warns. Colors that cannot be measured pass.
+// A background too light for white text is rejected: the slide keeps the default deep blue, and development warns. Colors that cannot be measured pass.
 export function safeBackground(slide: Slide) {
   const ratio = slide.background ? contrastWithWhite(slide.background) : null
   if (!slide.background || ratio === null || ratio >= MIN_CONTRAST)

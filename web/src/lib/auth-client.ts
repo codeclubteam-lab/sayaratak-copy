@@ -12,7 +12,22 @@ export const authClient = createAuthClient({
   plugins: [emailOTPClient(), twoFactorClient()],
   fetchOptions: {
     credentials: "include",
-    customFetchImpl: (input, init) => fetch(input, init),
+    customFetchImpl: (input, init) => {
+      const headers = new Headers(
+        init?.headers ?? (input instanceof Request ? input.headers : undefined)
+      )
+      // Capture the rendered route's language per call, never in shared SSR state.
+      const locale =
+        typeof document === "undefined"
+          ? undefined
+          : document.documentElement.lang
+      if (
+        (locale === "ar" || locale === "en") &&
+        !headers.has("accept-language")
+      )
+        headers.set("accept-language", locale)
+      return fetch(input, { ...init, headers })
+    },
     onError: ({ error, response }) => {
       throw authError(
         { ...error, status: response.status },

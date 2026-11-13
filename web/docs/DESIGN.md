@@ -1,6 +1,6 @@
 # Design
 
-The look is a well-run dealership office: calm, legible, quick. Asphalt for text, Nile green for trust and action, road-marking amber for paid promotion only. Surfaces are a cool green-grey. Speed and clear feedback carry the feel; motion is short and rare.
+The look is a well-run dealership office: calm, legible, quick. Asphalt for text, royal blue (#3659E3) for brand actions, road-marking amber for paid promotion only. Surfaces are neutral slate. Green is reserved for success states and third-party brand marks. Speed and clear feedback carry the feel; motion is short and rare.
 
 All tokens live in `src/styles.css`. Restyle through tokens; never edit `src/components/ui` for looks.
 
@@ -22,19 +22,19 @@ Light theme only. OKLCH is the source of truth; re-run `bun run contrast` after 
 
 | Token | OKLCH | Use |
 |---|---|---|
-| `--background` | `0.966 0.004 150` | Page |
+| `--background` | `0.97219139 0.00342312 247.85811179` | Page (#F4F6F8) |
 | `--card` | `1 0 0` | Cards, dialogs, sheets, sidebar, header |
-| `--foreground` | `0.2 0.012 160` | Text |
-| `--muted` | `0.952 0.005 150` | Inset blocks, hover rows, skeletons, quiet badge fill, `secondary` buttons |
-| `--muted-foreground` | `0.46 0.012 160` | Secondary text |
-| `--border` | `0.915 0.005 150` | Row dividers, sticky-layer line |
-| `--input` | `0.64 0.012 160` | Form control border, unchecked switch track |
+| `--foreground` | `0.2 0.012 260` | Text |
+| `--muted` | `0.952 0.005 260` | Inset blocks, hover rows, skeletons, quiet badge fill, `secondary` buttons |
+| `--muted-foreground` | `0.46 0.012 260` | Secondary text |
+| `--border` | `0.915 0.005 260` | Row dividers, sticky-layer line |
+| `--input` | `0.64 0.012 260` | Form control border, unchecked switch track |
 | `--field` | `--card` on the page, `--muted` inside a card, dialog, sheet or popover | Form control fill, so a field is never white on white |
-| `--primary` / `--ring` | `0.43 0.085 163` | Main actions, links, focus |
-| `--primary-foreground` | `0.985 0.003 150` | Text on primary and destructive |
-| `--accent` / `--accent-foreground` | `0.93 0.028 163` / `0.32 0.07 163` | Selected nav item, chip, row |
+| `--primary` / `--ring` | `0.52637618 0.21275249 267.38671089` | Main actions, links, focus (#3659E3) |
+| `--primary-foreground` | `1 0 0` | White text on primary and destructive, including translucent primary hover |
+| `--accent` / `--accent-foreground` | `0.95379932 0.02191305 274.74316353` / `0.36248165 0.1322345 267.64160612` | Selected nav item, chip, row |
 | `--signal` / `--signal-foreground` | `0.82 0.16 82` / `0.26 0.05 80` | Paid promotion badges and Promote. Nothing else |
-| `--deep` / `--deep-foreground` / `--deep-accent` | `0.27 0.05 163` / `0.99 0.004 150` / `0.8 0.09 160` | Dark green banner and hero slide surfaces |
+| `--deep` / `--deep-foreground` / `--deep-accent` | `0.36248165 0.1322345 267.64160612` / `0.99 0.004 260` / `0.80530109 0.09752098 271.86818346` | Deep blue banner and hero slide surfaces (#203582) |
 | `--success` | `0.5 0.13 150` | Available, approved |
 | `--warning` | `0.48 0.09 65` | Reserved, pending review |
 | `--destructive` | `0.53 0.2 27` | Errors, delete, rejected |
@@ -109,7 +109,7 @@ Only `opacity`, `transform` and colors move. Every press shows a response within
 | Do | Do not |
 |---|---|
 | Make the price the largest thing on a card | Gradients, glass, blur, illustrations, stock hero photos |
-| Use one green main action per screen | Use amber for anything but paid promotion |
+| Use one royal blue main action per screen | Use amber for anything but paid promotion |
 | Separate with tone (page vs card) | Borders or shadows on cards |
 | Use logical CSS (`ms-`, `pe-`, `start-`, `text-start`) | `ml-`, `pr-`, `left-`, `text-right`, `rounded-l` outside `components/ui` |
 | Wrap phones, plates and model names in `<bdi>` or `dir="ltr"` | Let mixed-direction text reorder itself |
@@ -125,30 +125,34 @@ Only `opacity`, `transform` and colors move. Every press shows a response within
 `bun run contrast` (`scripts/contrast.ts`) reads the OKLCH tokens in `src/styles.css`, converts them to 8-bit sRGB and prints the WCAG 2.2 ratio of every pair below. It fails under 4.5 for text and under 3 for UI parts. Re-run it after any token change.
 
 ```
-ok    16.3  (min 4.5)  foreground on background
-ok    18.0  (min 4.5)  foreground on card
-ok     6.4  (min 4.5)  muted-foreground on background
+ok    16.7  (min 4.5)  foreground on background
+ok    18.1  (min 4.5)  foreground on card
+ok     6.6  (min 4.5)  muted-foreground on background
 ok     7.1  (min 4.5)  muted-foreground on card
 ok     6.2  (min 4.5)  muted-foreground on muted
-ok     7.5  (min 4.5)  primary-foreground on primary
-ok     7.8  (min 4.5)  primary on card
-ok     7.0  (min 4.5)  primary on background
-ok    10.0  (min 4.5)  accent-foreground on accent
+ok     5.7  (min 4.5)  primary-foreground on primary
+ok     4.7  (min 4.5)  primary-foreground on primary/90 over card
+ok     4.7  (min 4.5)  primary-foreground on primary/90 over background
+ok     5.7  (min 4.5)  primary on card
+ok     5.2  (min 4.5)  primary on background
+ok     9.7  (min 4.5)  accent-foreground on accent
 ok     8.8  (min 4.5)  signal-foreground on signal
-ok     5.6  (min 4.5)  primary-foreground on destructive
+ok    10.8  (min 4.5)  deep-foreground on deep
+ok     6.0  (min 4.5)  deep-accent on deep
+ok     5.9  (min 4.5)  primary-foreground on destructive
 ok     5.9  (min 4.5)  destructive on card
 ok     4.8  (min 4.5)  badge success on its tint
 ok     5.6  (min 4.5)  badge warning on its tint
 ok     4.8  (min 4.5)  badge destructive on its tint
-ok     6.4  (min 4.5)  badge primary on its tint
+ok     4.8  (min 4.5)  badge primary on its tint
 ok     3.4  (min 3)  input border on card
-ok     3.0  (min 3)  input border on background
-ok     7.8  (min 3)  ring on card
-ok     7.0  (min 3)  ring on background
+ok     3.1  (min 3)  input border on background
+ok     5.7  (min 3)  ring on card
+ok     5.2  (min 3)  ring on background
 ```
 
 The badge pairs use a 12 percent tint of the status color over the card.
 
 ## Focus
 
-Every control shows a 2 px focus outline with a 2 px offset in `--ring` (same green as primary, 7.8 on the card, 7.0 on the page). Text inputs and selects show a ring (box shadow) instead. Checked by tabbing through home, search, listing, sign up and the post wizard: every control kind showed one of the two.
+Every control shows a 2 px focus outline with a 2 px offset in `--ring` (same royal blue as primary, 5.7 on the card, 5.2 on the page). Text inputs and selects show a ring (box shadow) instead. To verify, tab through home, search, listing, sign up and the post wizard: every control kind must show one of the two.

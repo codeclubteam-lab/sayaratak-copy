@@ -62,7 +62,7 @@
 
 /* Literal tokens. The shadow is only for floating layers: popover, dialog, sheet, toast. */
 @theme {
-  --shadow-floating: 0 8px 24px oklch(0.2 0.01 160 / 0.1);
+  --shadow-floating: 0 8px 24px oklch(0.2 0.01 260 / 0.1);
   --default-transition-duration: var(--dur-fast);
   --default-transition-timing-function: var(--ease-standard);
   --animate-heart-pop: heart-pop 200ms var(--ease-standard);
@@ -79,32 +79,33 @@
 :root {
   /* Per-language family (A5). The Arabic family carries its own Latin glyphs, so mixed text keeps one set of proportions. */
   --font-family: "IBM Plex Sans", sans-serif;
-  --background: oklch(0.966 0.004 150);
-  --foreground: oklch(0.2 0.012 160);
+  --background: oklch(0.97219139 0.00342312 247.85811179);
+  --foreground: oklch(0.2 0.012 260);
   --card: oklch(1 0 0);
   --card-foreground: var(--foreground);
   --popover: var(--card);
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.43 0.085 163);
-  --primary-foreground: oklch(0.985 0.003 150);
+  /* Royal blue #3659E3, converted from sRGB. */
+  --primary: oklch(0.52637618 0.21275249 267.38671089);
+  --primary-foreground: oklch(1 0 0);
   --secondary: var(--muted);
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.952 0.005 150);
-  --muted-foreground: oklch(0.46 0.012 160);
-  --accent: oklch(0.93 0.028 163);
-  --accent-foreground: oklch(0.32 0.07 163);
+  --muted: oklch(0.952 0.005 260);
+  --muted-foreground: oklch(0.46 0.012 260);
+  --accent: oklch(0.95379932 0.02191305 274.74316353);
+  --accent-foreground: oklch(0.36248165 0.1322345 267.64160612);
   --signal: oklch(0.82 0.16 82);
   --signal-foreground: oklch(0.26 0.05 80);
-  /* Deep Nile green: the banner surface and its text. */
-  --deep: oklch(0.27 0.05 163);
-  --deep-foreground: oklch(0.99 0.004 150);
-  --deep-accent: oklch(0.8 0.09 160);
+  /* Deep blue #203582: the banner surface and its text. */
+  --deep: oklch(0.36248165 0.1322345 267.64160612);
+  --deep-foreground: oklch(0.99 0.004 260);
+  --deep-accent: oklch(0.80530109 0.09752098 271.86818346);
   --success: oklch(0.5 0.13 150);
   --warning: oklch(0.48 0.09 65);
   --destructive: oklch(0.53 0.2 27);
-  --border: oklch(0.915 0.005 150);
-  --input: oklch(0.64 0.012 160);
-  --ring: oklch(0.43 0.085 163);
+  --border: oklch(0.915 0.005 260);
+  --input: oklch(0.64 0.012 260);
+  --ring: oklch(0.52637618 0.21275249 267.38671089);
   --chart-1: var(--primary);
   --chart-2: var(--signal);
   --chart-3: oklch(0.55 0.02 170);

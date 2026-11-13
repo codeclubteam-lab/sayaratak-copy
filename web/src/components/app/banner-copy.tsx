@@ -41,7 +41,7 @@ function Photo({
   )
 }
 
-// A strip banner is a photo with real text next to it (A5b: flat deep green, no gradient): a row on desktop and a compact card on a phone (small photo, two lines, a text link). The home hero is `HeroSlide`.
+// A strip banner is a photo with real text next to it (A5b: flat deep blue, no gradient): a row on desktop and a compact card on a phone (small photo, two lines, a text link). The home hero is `HeroSlide`.
 export function BannerCopy({
   banner,
   copy,

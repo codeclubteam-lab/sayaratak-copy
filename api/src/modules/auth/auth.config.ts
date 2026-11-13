@@ -8,6 +8,7 @@ import { db } from "~/shared/db/client"
 import { ALL_PREFS } from "~/shared/db/defaults"
 import * as schema from "~/shared/db/schema"
 import { send } from "~/shared/mail/send"
+import { localeOf } from "~/shared/mail/locale"
 
 import {
   ADMIN_CODE_PATH,
@@ -104,6 +105,15 @@ export const auth = betterAuth({
       interests: { type: "string[]", defaultValue: [], input: false },
       prefs: { type: "json", defaultValue: ALL_PREFS, input: false },
       chosenPlanId: { type: "string", required: false, input: false },
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user, context) => ({
+          data: { ...user, locale: localeOf(context?.request) },
+        }),
+      },
     },
   },
   advanced: {
