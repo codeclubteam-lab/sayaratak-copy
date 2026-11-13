@@ -70,7 +70,7 @@ export function PlansGrid(props: Props) {
       <div
         role={props.mode === "select" ? "radiogroup" : undefined}
         aria-label={props.mode === "select" ? props.label : undefined}
-        className="grid gap-3 @xl:grid-cols-2 @3xl:grid-cols-3"
+        className="grid gap-3 sm:grid-cols-2 @md:grid-cols-2 @3xl:grid-cols-3"
       >
         {plans.map((plan) => (
           <PlanCard

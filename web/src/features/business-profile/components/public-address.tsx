@@ -12,8 +12,8 @@ export function PublicAddress({ path }: { path: string }) {
       <span className="text-ui font-medium">
         {t("dashboard.profile_address")}
       </span>
-      <div className="flex items-center gap-2 rounded-lg bg-muted ps-3">
-        <bdi dir="ltr" className="min-w-0 flex-1 truncate text-ui">
+      <div className="flex w-fit max-w-full items-center gap-2 rounded-lg bg-muted py-1 ps-3 pe-1">
+        <bdi dir="ltr" className="min-w-0 truncate text-ui">
           {url}
         </bdi>
         <CopyButton value={url} label={t("dashboard.profile_copy")} />

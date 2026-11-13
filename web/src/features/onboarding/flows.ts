@@ -205,6 +205,7 @@ export const flows = {
         whatsapp: "",
         planId: "",
       }),
+      wide: true,
       Component: MechanicContactPlanStep,
     },
   ],

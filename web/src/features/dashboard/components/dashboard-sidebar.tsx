@@ -40,11 +40,8 @@ export function DashboardSidebar({ me }: { me: User }) {
       className="[view-transition-name:dashboard-sidebar]"
     >
       <SidebarHeader className="px-4 py-4 group-data-[collapsible=icon]:h-14 group-data-[collapsible=icon]:p-0">
-        <div className="flex flex-col gap-1 group-data-[collapsible=icon]:hidden">
+        <div className="flex items-center justify-center group-data-[collapsible=icon]:hidden">
           <BrandLogo />
-          <p className="text-caption text-muted-foreground">
-            {t(`dashboard.role_${me.role}`)}
-          </p>
         </div>
       </SidebarHeader>
       <SidebarContent>

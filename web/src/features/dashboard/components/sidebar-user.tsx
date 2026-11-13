@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "@tanstack/react-router"
 import { GlobeIcon, LogOutIcon } from "lucide-react"
 
@@ -6,6 +7,7 @@ import { useT } from "@/lib/i18n/use-t"
 import { localeHref } from "@/lib/navigation"
 import type { User } from "@sayaratak/shared/schemas/user"
 import { useLogout } from "@/features/auth/queries"
+import { businessQueries } from "@/features/directory/queries"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   SidebarFooter,
@@ -21,6 +23,19 @@ export function SidebarUser({ me }: { me: User }) {
   const { t, locale } = useT()
   const router = useRouter()
   const logout = useLogout()
+  const isBusiness =
+    me.role === "mechanic" || me.role === "workshop" || me.role === "dealership"
+  const { data: business } = useQuery({
+    ...businessQueries.mine,
+    enabled: isBusiness,
+  })
+  const businessPhoto =
+    business && "photoUrl" in business
+      ? business.photoUrl
+      : business && "logoUrl" in business
+        ? business.logoUrl
+        : undefined
+  const photo = me.avatarUrl || businessPhoto
   return (
     <SidebarFooter>
       <SidebarMenu>
@@ -58,7 +73,7 @@ export function SidebarUser({ me }: { me: User }) {
             render={<a href={localeHref(accountPath(me.role), locale)} />}
           >
             <Avatar className="size-8">
-              {me.avatarUrl && <AvatarImage src={me.avatarUrl} alt="" />}
+              {photo && <AvatarImage src={photo} alt="" />}
               <AvatarFallback className="bg-accent text-caption font-semibold text-accent-foreground">
                 <bdi>{initials(me.fullName)}</bdi>
               </AvatarFallback>

@@ -9,8 +9,10 @@ export function MechanicContactPlanStep() {
   const { watch } = useFormContext<MechanicContactPlan>()
   return (
     <>
-      <PhoneField />
-      <WhatsappField first={watch("phone")} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <PhoneField />
+        <WhatsappField first={watch("phone")} />
+      </div>
       <PlanStep audience="mechanic" />
     </>
   )
