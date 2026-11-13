@@ -433,24 +433,37 @@ bun run --cwd web test:e2e --config playwright.same-origin.config.ts --workers=1
 
 **Interfaces:** Consumes passing local gates and Task 1's service IDs/current configuration. Produces recorded deployed commit IDs, a redacted env diff, backup reference if DB work was needed and successful public smoke results.
 
-- [ ] Show the owner the exact non-secret env changes, affected services, expected brief disruption, migration/grant effects and rollback sequence. Reauthenticate Render if needed. Do not replace entire env sets or rotate the auth secret.
-- [ ] Record previous build commits/configuration privately. Check auto-deploy behavior before pushing; a push is not harmless if it immediately deploys both services. Use explicit deployment control for the coordinated cutover.
-- [ ] If DB writes are necessary, first take and verify an encrypted off-service PostgreSQL 18 backup using the existing runbook. Free Render has no built-in backup guarantee. Test the backup on a scratch DB before an approved schema-changing command. Do not use application backup machinery blindly if its tables are part of the diagnosed failure.
-- [ ] Run only the reviewed readiness remedy: existing `db:migrate` for confirmed pending migrations, existing role-grant setup for confirmed missing grants, or a code/image deployment for a probe/packaging defect. Use a local terminal and the external DB URL kept privately; do not assume free Render supports shell/pre-deploy commands. No migration on normal API startup.
-- [ ] Preserve provider/SMTP values and free plans. Apply the Task 4 origin table and approved Google Console callback entry. Deploy the coordinated API and website builds, rebuilding web after VITE settings. Check each service reaches its intended commit, not a cached earlier artifact.
-- [ ] Run the read-only smoke script:
+- [x] Show the owner the exact non-secret env changes, affected services, expected brief disruption, migration/grant effects and rollback sequence. Reauthenticate Render if needed. Do not replace entire env sets or rotate the auth secret.
+- [x] Record previous build commits/configuration privately. Check auto-deploy behavior before pushing; a push is not harmless if it immediately deploys both services. Use explicit deployment control for the coordinated cutover.
+- [x] If DB writes are necessary, first take and verify an encrypted off-service PostgreSQL 18 backup using the existing runbook. Free Render has no built-in backup guarantee. Test the backup on a scratch DB before an approved schema-changing command. Do not use application backup machinery blindly if its tables are part of the diagnosed failure.
+- [x] Run only the reviewed readiness remedy: existing `db:migrate` for confirmed pending migrations, existing role-grant setup for confirmed missing grants, or a code/image deployment for a probe/packaging defect. Use a local terminal and the external DB URL kept privately; do not assume free Render supports shell/pre-deploy commands. No migration on normal API startup.
+- [x] Preserve provider/SMTP values and free plans. Apply the Task 4 origin table and approved Google Console callback entry. Deploy the coordinated API and website builds, rebuilding web after VITE settings. Check each service reaches its intended commit, not a cached earlier artifact.
+- [x] Run the read-only smoke script:
 
 ```bash
 bun run --cwd web scripts/check-deployment.ts https://sayaratak-web.onrender.com https://sayaratak-api-91a8.onrender.com
 ```
 
-- [ ] Confirm web `/ar` and `/en` 200, web `/api/v1/site` and `/api/v1/taxonomy` valid 200 JSON, signed-out web `/api/v1/me` 200/null, direct API readiness 200 with all configured checks ok. Never change Render health to `/live` just to conceal readiness failure.
+- [x] Confirm web `/ar` and `/en` 200, web `/api/v1/site` and `/api/v1/taxonomy` valid 200 JSON, signed-out web `/api/v1/me` 200/null, direct API readiness 200 with all configured checks ok. Never change Render health to `/live` just to conceal readiness failure.
   Before cutover acceptance, correlate ordinary and forged-header GETs from two owner-approved
   networks: direct API and website-proxied requests must resolve to each network's observed
   platform IP, not ::1, the website egress or visitor-supplied values. Verify invalid assertion
   rejection and no secrets in responses/logs. No public diagnostic/echo route may be introduced.
-- [ ] If cutover fails, stop and report. Roll back code and coupled origin/env values together to the recorded state; do not restore/drop data automatically. Schema rollback is allowed only through the separately reviewed runbook process, not this task's normal rollback.
-- [ ] Record redacted deployment evidence, affected commits and remaining live-auth tests. Do not declare signup fixed before Task 7.
+- [x] If cutover fails, stop and report. Roll back code and coupled origin/env values together to the recorded state; do not restore/drop data automatically. Schema rollback is allowed only through the separately reviewed runbook process, not this task's normal rollback.
+- [x] Record redacted deployment evidence, affected commits and remaining live-auth tests. Do not declare signup fixed before Task 7.
+
+**Live evidence (2026-11-13):**
+- Previous state recorded privately in `/tmp/opencode/render-repair-task6/pre-cutover-inventory.json`: API live `0b65e0a`, Web live `950ade9`.
+- Live PostgreSQL 18 backup taken over TLS, verified SHA-256 (`9cab328fb790d42e...`), encrypted with AES-256-CBC PBKDF2 off-service, decrypted and verified matching hash.
+- Rehearsed restore and migration on local PostgreSQL 18 scratch DB `sayaratak_r6_drill`: 59 tables, 23 migrations -> 24 migrations, `listings_created` index created `(created_at DESC, id)` valid/ready, 1 user row preserved.
+- Applied migration `0023_listings_created_index` to live Render database over TLS: 24 migrations, `listings_created` index created, 1 user row intact.
+- Auto-deploy paused; individual env keys updated without replacing secret sets (`APP_ENV=development`, `CLIENT_IP_MODE=render`, website origins, shared >=32 char `PROXY_CLIENT_IP_SECRET` generated privately); secrets verified unchanged via SHA-256 comparison.
+- Pushed repair commits `0b65e0a..c4dfc8d` to `origin/main`. Deployed API `srv-dblcsuqjnfac73fkppb0` on `c4dfc8d` (`dep-dbqvbcutlv9c73d88qug`, live, 200 `/api/health/ready`). Rebuilt and deployed Web `srv-dblcs8qjnfac73fko6dg` on `c4dfc8d` with clear-cache (`dep-dbqvbs88v5cc73ea4l5g`, live). Auto-deploy restored.
+- Smoke checker passed 12/12 (`/ar`, `/en`, `/api/v1/{site,taxonomy,me}` through Web, `/api/health/ready` 200 ok on all checks).
+- Two-network client IP verified:
+  - Network 1 (`58.65.153.223`): direct API logged `58.65.153.223` (200), website proxy logged `58.65.153.223` (200). Direct forged XFF/signature rejected (403), proxied forged headers rejected (403).
+  - Network 2 (`58.65.153.222`): direct API logged `58.65.153.222` (200), website proxy logged `58.65.153.222` (200). Direct forged XFF/signature rejected (403), proxied forged headers rejected (403).
+- Zero secrets in responses or logs. No public diagnostic endpoint added. Owner confirmed Google Cloud Console origin and redirect URI updated to `https://sayaratak-web.onrender.com`.
 
 **Done when:** The actual deployed website and API pass non-mutating smoke checks with the new configuration. Any necessary DB change has its approved safety evidence. Local passing tests alone do not satisfy this task.
 

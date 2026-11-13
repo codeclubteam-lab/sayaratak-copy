@@ -346,6 +346,16 @@ Coordinated cutover/rollback for Task 6:
    if the cookie name/origin changed. Do not rotate the auth secret, drop the additive index,
    delete migration rows, restore over or reset live data as rollback.
 
+**Task 6 cutover execution, 2026-11-13:**
+- Pre-cutover state recorded privately: API `0b65e0a`, Web `950ade9`.
+- Full off-service PostgreSQL 18 backup taken over TLS, SHA-256 verified, AES-256-CBC PBKDF2 encrypted/decrypted and verified.
+- Rehearsed restore into local scratch DB `sayaratak_r6_drill`: 59 tables, 23 -> 24 migrations, `listings_created` index created.
+- Applied migration `0023_listings_created_index` to live database via `scripts/migrate.ts` over TLS. Readiness became 200 with all checks `ok`.
+- Auto-deploy paused; updated only scoped env keys (`APP_ENV=development`, `CLIENT_IP_MODE=render`, website origins, shared >=32 char `PROXY_CLIENT_IP_SECRET`), secrets preserved.
+- Pushed `c4dfc8d` to `origin/main`. Deployed API `srv-dblcsuqjnfac73fkppb0` (`dep-dbqvbcutlv9c73d88qug`) and Web `srv-dblcs8qjnfac73fko6dg` (`dep-dbqvbs88v5cc73ea4l5g`), restored auto-deploy.
+- Read-only smoke check passed 12/12 (`scripts/check-deployment.ts`).
+- Two-network client IP verified: Network 1 (`58.65.153.223`) and Network 2 (`58.65.153.222`) both logged their exact visitor IP on direct and web-proxied calls, while spoofed and forged headers returned 403. Zero secrets leaked. Owner confirmed Google Console callback updated to `https://sayaratak-web.onrender.com/api/v1/auth/callback/google`. Live auth walkthrough remains Task 7.
+
 ### Concurrent code-mail reservations
 
 Code mail remains limited to five reservations per recipient per hour, including pending and
