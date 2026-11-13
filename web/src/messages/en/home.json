@@ -27,6 +27,12 @@
   "home.mechanics": "Top mechanics",
   "home.all_mechanics": "All mechanics",
   "home.post_band": "Selling a vehicle or spare parts? Post a listing and buyers can call you today.",
+  "home.post_band_title": "Selling a vehicle or spare parts? Post your listing and buyers will call you directly.",
+  "home.post_band_desc": "Reach active buyers across Khartoum, Port Sudan, and all states. No middleman fees, direct phone and WhatsApp contact, and whole SDG pricing.",
+  "home.post_band_commission": "0% commission",
+  "home.post_band_direct": "Direct phone & WhatsApp",
+  "home.post_band_currency": "Whole SDG only",
+  "home.explore_marketplace": "Explore the marketplace",
   "home.section_error": "This section did not load.",
   "home.section_error_hint": "Check your connection and try again."
 }

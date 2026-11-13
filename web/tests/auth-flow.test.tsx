@@ -115,7 +115,7 @@ describe("LoginForm", () => {
     type("Password", "wrong1234")
     fireEvent.click(screen.getByRole("button", { name: "Log in" }))
     expect(
-      await screen.findByText("The phone, email or password is not correct")
+      await screen.findByText("The email or password is not correct")
     ).toBeTruthy()
     expect(screen.getByLabelText<HTMLInputElement>("Password").value).toBe("")
     expect(

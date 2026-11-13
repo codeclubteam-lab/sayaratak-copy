@@ -63,75 +63,70 @@ export function EmptyResults({
       wide
       className="flex-none"
       action={
-        <>
-          <h3 className="text-ui font-medium">{t("search.suggest_title")}</h3>
-          <ul className="flex flex-wrap justify-center gap-2">
-            {loosen.map((f) => (
-              <li key={f.id}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onChange(f.next)}
-                >
-                  {t("search.suggest_remove", {
-                    label: f.label,
-                    n: formatNumber(f.count, locale),
-                  })}
-                </Button>
-              </li>
-            ))}
-            {wider && (
-              <li>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    onChange({ ...params, radius: wider, page: 1 })
-                  }
-                >
-                  {t("search.suggest_radius", { km: wider })}
-                </Button>
-              </li>
-            )}
-            {nearby.map(({ city, count }) => (
-              <li key={city.id}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() =>
-                    onChange({
-                      ...params,
-                      city: city.id,
-                      district: undefined,
-                      radius: undefined,
-                      lat: undefined,
-                      lng: undefined,
-                      page: 1,
-                    })
-                  }
-                >
-                  {t("search.suggest_city", {
-                    city: city.name[locale],
-                    n: formatNumber(count, locale),
-                  })}
-                </Button>
-              </li>
-            ))}
-            {filters.length > 0 && (
-              <li>
-                <Button
-                  type="button"
-                  onClick={() => onChange(clearFilters(params))}
-                >
-                  {t("common.clear_all")}
-                </Button>
-              </li>
-            )}
-            <li>
-              <SaveSearchButton params={params} />
+        <ul className="flex flex-wrap justify-center gap-2">
+          {loosen.map((f) => (
+            <li key={f.id}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onChange(f.next)}
+              >
+                {t("search.suggest_remove", {
+                  label: f.label,
+                  n: formatNumber(f.count, locale),
+                })}
+              </Button>
             </li>
-          </ul>
-        </>
+          ))}
+          {wider && (
+            <li>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onChange({ ...params, radius: wider, page: 1 })}
+              >
+                {t("search.suggest_radius", { km: wider })}
+              </Button>
+            </li>
+          )}
+          {nearby.map(({ city, count }) => (
+            <li key={city.id}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  onChange({
+                    ...params,
+                    city: city.id,
+                    district: undefined,
+                    radius: undefined,
+                    lat: undefined,
+                    lng: undefined,
+                    page: 1,
+                  })
+                }
+              >
+                {t("search.suggest_city", {
+                  city: city.name[locale],
+                  n: formatNumber(count, locale),
+                })}
+              </Button>
+            </li>
+          ))}
+          {filters.length > 0 && (
+            <li>
+              <Button
+                type="button"
+                onClick={() => onChange(clearFilters(params))}
+              >
+                {t("common.clear_all")}
+              </Button>
+            </li>
+          )}
+          <li>
+            <SaveSearchButton params={params} />
+          </li>
+        </ul>
       }
     />
   )

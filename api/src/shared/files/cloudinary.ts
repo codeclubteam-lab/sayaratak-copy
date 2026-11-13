@@ -88,7 +88,7 @@ async function call(
   const form = new FormData()
   for (const [key, value] of Object.entries(signed(credentials, body.params)))
     form.set(key, value)
-  if (body.file) form.set("file", body.file)
+  if (body.file) form.set("file", body.file, "upload")
   const response = await fetch(`${API}/${credentials.cloudName}/${path}`, {
     method: "POST",
     body: form,
